@@ -46,7 +46,7 @@ CREATE TABLE staging.stg_orders(
 	order_id TEXT,
 	user_id TEXT,
 	estimated_arrival TEXT,
-	transaction_data DATE,
+	transaction_date DATE,
 	-- additional metadata for data lineage/tracking
 	source_filename TEXT,
 	ingestion_date TIMESTAMP
