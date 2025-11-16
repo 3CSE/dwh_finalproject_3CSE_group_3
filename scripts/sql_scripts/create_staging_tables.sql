@@ -14,7 +14,7 @@ CREATE TABLE staging.stg_product_list(
 	price DECIMAL(8, 2),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 
@@ -26,7 +26,7 @@ CREATE TABLE staging.stg_line_items_products(
 	product_id VARCHAR(25),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 DROP TABLE IF EXISTS staging.stg_line_items_prices;
@@ -36,7 +36,7 @@ CREATE TABLE staging.stg_line_items_prices(
 	quantity VARCHAR(10),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Orders
@@ -49,7 +49,7 @@ CREATE TABLE staging.stg_orders(
 	transaction_data DATE,
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Order Delays
@@ -59,7 +59,7 @@ CREATE TABLE staging.stg_order_delays(
 	delay_in_days INT,
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Customer
@@ -78,7 +78,7 @@ CREATE TABLE staging.stg_user_data(
 	user_type VARCHAR(10),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 DROP TABLE IF EXISTS staging.stg_user_job;
@@ -89,7 +89,7 @@ CREATE TABLE staging.stg_user_job(
 	job_level VARCHAR(25),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 DROP TABLE IF EXISTS staging.stg_user_credit_card;
@@ -100,7 +100,7 @@ CREATE TABLE staging.stg_user_credit_card(
 	issuing_bank VARCHAR(25),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Enterprise/Merchant
@@ -116,7 +116,7 @@ CREATE TABLE staging.stg_merchant_data(
 	contact_number VARCHAR(50),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 DROP TABLE IF EXISTS staging.stg_order_merchant;
@@ -126,7 +126,7 @@ CREATE TABLE staging.stg_order_merchant(
 	staff_id VARCHAR(25),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Staff
@@ -143,7 +143,7 @@ CREATE TABLE staging.stg_staff(
 	creation_date TIMESTAMP,
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 --Marketing
@@ -155,7 +155,7 @@ CREATE TABLE staging.stg_campaign(
 	discount VARCHAR(10),
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
 
 DROP TABLE IF EXISTS staging.stg_campaign_transactions;
@@ -167,5 +167,5 @@ CREATE TABLE staging.stg_campaign_transactions(
 	availed INT,
 	-- additional metadata for data lineage/tracking
 	source_filename VARCHAR (50),
-	ingestion_data TIMESTAMP
+	ingestion_date TIMESTAMP
 );
