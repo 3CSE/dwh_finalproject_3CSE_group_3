@@ -61,6 +61,11 @@ def ingest_user_job(
         # Convert rows to tuples
         data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
 
+        # Truncate table
+        logging.info(f"Truncating table {table_name}")
+        cur.execute(f"TRUNCATE TABLE {table_name}")
+        conn.commit()
+
         # Batch insert
         for i in range(0, len(data_tuples), batch_size):
             batch = data_tuples[i : i + batch_size]
