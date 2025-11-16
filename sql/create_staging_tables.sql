@@ -138,7 +138,7 @@ CREATE TABLE staging.stg_staff(
 	street TEXT,
 	state TEXT,
 	city TEXT,
-	country VTEXT,
+	country TEXT,
 	contact_number TEXT,
 	creation_date TIMESTAMP,
 	-- additional metadata for data lineage/tracking
