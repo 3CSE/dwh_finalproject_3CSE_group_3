@@ -60,7 +60,7 @@ CREATE TABLE staging.stg_order_delays(
 );
 
 --Customer
-DROP TABLE IF EXISTS stagin.stg_user_data;
+DROP TABLE IF EXISTS staging.stg_user_data;
 CREATE TABLE staging.stg_user_data(
 	user_id VARCHAR(25),
 	creation_date TIMESTAMP,
@@ -78,7 +78,7 @@ CREATE TABLE staging.stg_user_data(
 	ingestion_data TIMESTAMP
 );
 
-DROP TABLE IF EXISTS ng.stg_user_job;
+DROP TABLE IF EXISTS staging.stg_user_job;
 CREATE TABLE staging.stg_user_job(
 	user_id VARCHAR(25),
 	name VARCHAR(50),
