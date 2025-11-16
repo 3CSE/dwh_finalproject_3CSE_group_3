@@ -14,51 +14,52 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-CSV_FILE = "./dataset/customer_management_department/user_job.csv"
+# Path to data file
+HTML_FILE = "./dataset/operations_department/order_delays.html"
 
-def ingest_user_job(
-    file_path=CSV_FILE,
-    table_name="staging.stg_user_job",
+def ingest_order_delays(
+    file_path=HTML_FILE,
+    table_name="staging.stg_order_delays",
     batch_size=5000
 ):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")
 
-    # Connect to database
+    # Connect to the database
     try:
         conn = get_connection()
         cur = conn.cursor()
         logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+    except Exception as e:
+        logging.error(f"Cannot proceed without database connection: {e}")
         return
 
     try:
-        # Load CSV
-        df = pd.read_csv(file_path)
+        # Read HTML table
+        with open(file_path, "r", encoding="utf-8") as f:
+            df = pd.read_html(f.read())[0]
+
+        # Drop unnamed index column 
+        df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
 
         # Normalize column names
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-        # Required columns
-        required_cols = ["user_id", "name", "job_title", "job_level"]
-
+        required_cols = ["order_id", "delay_in_days"]
         for col in required_cols:
             if col not in df.columns:
-                raise KeyError(f"Required column '{col}' missing from CSV")
+                raise KeyError(f"Required column '{col}' missing in file {file_path}")
 
-        # Convert everything to string (except metadata)
-        text_cols = ["user_id", "name", "job_title", "job_level"]
-        for col in text_cols:
-            df[col] = df[col].astype(str)
+        # Data type conversions
+        df["order_id"] = df["order_id"].astype(str)
+        df["delay_in_days"] = pd.to_numeric(df["delay_in_days"], errors="coerce").astype('Int64')
 
         # Metadata
         df["source_filename"] = os.path.basename(file_path)
         df["ingestion_date"] = datetime.now()
 
-        # Order of columns for DB
         insert_cols = required_cols + ["source_filename", "ingestion_date"]
 
-        # Convert rows to tuples
+        # Convert to tuples for batch insert
         data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
 
         # Truncate table
@@ -68,18 +69,16 @@ def ingest_user_job(
 
         # Batch insert
         for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i : i + batch_size]
-
+            batch = data_tuples[i:i + batch_size]
             execute_values(
                 cur,
                 f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
                 batch
             )
             conn.commit()
-
             logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
 
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted")
+        logging.info(f"Ingestion complete — Total rows inserted: {len(data_tuples)}")
 
     except Exception as e:
         logging.error(f"Error during ingestion: {e}")
@@ -91,4 +90,4 @@ def ingest_user_job(
 
 
 if __name__ == "__main__":
-    ingest_user_job()
+    ingest_order_delays()

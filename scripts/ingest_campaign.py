@@ -45,6 +45,11 @@ def ingest_campaign(file_path=CSV_FILE, table_name="staging.stg_campaign"):
 
                 row = row[:4]
                 split_data.append(row)
+                
+        # Truncate table
+        logging.info(f"Truncating table {table_name}")
+        cur.execute(f"TRUNCATE TABLE {table_name}")
+        conn.commit()
 
         # Insert rows
         for row in split_data:
