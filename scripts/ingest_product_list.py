@@ -92,16 +92,12 @@ def ingest_staff_data(
         # Prepare tuples
         data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
 
-        # --------------------------------------------------------
-        # 4. TRUNCATE TABLE
-        # --------------------------------------------------------
+        # Truncate table
         logging.info(f"Truncating table {table_name}")
         cur.execute(f"TRUNCATE TABLE {table_name}")
         conn.commit()
 
-        # --------------------------------------------------------
-        # 5. BATCH INSERT USING execute_values
-        # --------------------------------------------------------
+        # Batch insert
         for i in range(0, len(data_tuples), batch_size):
             batch = data_tuples[i:i + batch_size]
 
