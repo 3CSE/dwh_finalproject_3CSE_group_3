@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
+from database_connection import get_connection
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 import logging
@@ -21,24 +21,6 @@ FILES = [
     for f in os.listdir(DATA_DIR)
     if f.lower().endswith(".csv") or f.lower().endswith(".parquet")
 ]
-
-def get_connection():
-    """Connect to PostgreSQL using environment variables."""
-    try:
-        conn = connect(
-            host=os.environ['DB_HOST'],
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASS'],
-            port=int(os.environ.get('DB_PORT', 5432))
-        )
-        return conn
-    except KeyError as e:
-        logging.error(f"Missing environment variable: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Failed to connect to database: {e}")
-        raise
 
 def ingest_order_merchant(file_path, table_name="staging.stg_order_merchant", batch_size=5000):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")
