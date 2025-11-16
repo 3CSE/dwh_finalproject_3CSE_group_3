@@ -1,26 +1,29 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 from database_connection import get_connection
 import logging
+from bs4 import MarkupResemblesLocatorWarning
+import warnings
 
 # Load .env variables
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-HTML_FILE = "../dataset/enterprise_department/merchant_data.html"
+HTML_FILE = "./dataset/enterprise_department/staff_data.html"
 
-def ingest_merchant_data(
+
+def ingest_staff_data(
     file_path=HTML_FILE,
-    table_name="staging.stg_merchant_data",
+    table_name="staging.stg_staff",
     batch_size=5000
 ):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")
 
+    # Database connection
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -30,8 +33,9 @@ def ingest_merchant_data(
         return
 
     try:
-        # Read the table from HTML
-        df = pd.read_html(file_path)[0]
+        # Read HTML files
+        with open(file_path, "r", encoding="utf-8") as f:
+            df = pd.read_html(f.read())[0]
 
         # Drop index column if present
         if (
@@ -41,38 +45,51 @@ def ingest_merchant_data(
         ):
             df = df.iloc[:, 1:]
 
-        # Normalize column names (strip & replace spaces)
+        # Normalize column names
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
+        # required column checks
         required_cols = [
-            'merchant_id', 'creation_date', 'name', 'street',
-            'state', 'city', 'country', 'contact_number'
+            "staff_id",
+            "name",
+            "job_level",
+            "street",
+            "state",
+            "city",
+            "country",
+            "contact_number",
+            "creation_date"
         ]
 
-        # Validate columns
         for col in required_cols:
             if col not in df.columns:
                 raise KeyError(f"Required column '{col}' not found in HTML")
 
-        # Transformations
-        df['creation_date'] = pd.to_datetime(df['creation_date'])
+        # Convert date column
+        df["creation_date"] = pd.to_datetime(df["creation_date"])
 
-        # Convert text columns to string
+        # Convert all text-like fields to string
         text_cols = [
-            'merchant_id', 'name', 'street', 'state',
-            'city', 'country', 'contact_number'
+            "staff_id",
+            "name",
+            "job_level",
+            "street",
+            "state",
+            "city",
+            "country",
+            "contact_number"
         ]
         for col in text_cols:
             df[col] = df[col].astype(str)
 
-        # Metadata
-        df['source_filename'] = file_path
-        df['ingestion_date'] = datetime.now()
+        # Add metadata
+        df["source_filename"] = file_path
+        df["ingestion_date"] = datetime.now()
 
-        # Order of columns for DB
-        insert_cols = required_cols + ['source_filename', 'ingestion_date']
+        # Final order for inserting
+        insert_cols = required_cols + ["source_filename", "ingestion_date"]
 
-        # Convert dataframe rows to tuples
+        # Prepare tuples
         data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
 
         # Truncate table
@@ -105,4 +122,4 @@ def ingest_merchant_data(
 
 
 if __name__ == "__main__":
-    ingest_merchant_data()
+    ingest_staff_data()

@@ -1,28 +1,29 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
+from dotenv import load_dotenv
 from database_connection import get_connection
 import logging
-from dotenv import load_dotenv
 
-# Load .env variables
+# Load environment variables
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-CSV_FILE = "./dataset/marketing_department/transactional_campaign_data.csv"
+CSV_FILE = "./dataset/customer_management_department/user_job.csv"
 
-
-
-def ingest_campaign_transactions(
+def ingest_user_job(
     file_path=CSV_FILE,
-    table_name="staging.stg_campaign_transactions",
+    table_name="staging.stg_user_job",
     batch_size=5000
 ):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")
 
+    # Connect to database
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -34,36 +35,30 @@ def ingest_campaign_transactions(
     try:
         # Load CSV
         df = pd.read_csv(file_path)
-        df.columns = df.columns.str.strip()
 
-        # Drop unnamed index column if present
-        if df.columns[0].lower().startswith("unnamed") or df.columns[0] == "":
-            df = df.iloc[:, 1:]
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-        # Normalize column names (remove spaces)
-        df.columns = df.columns.str.replace(" ", "_")
+        # Required columns
+        required_cols = ["user_id", "name", "job_title", "job_level"]
 
-        # Required transformations
-        df["transaction_date"] = pd.to_datetime(df["transaction_date"]).dt.date
-        df["estimated_arrival"] = df["estimated_arrival"].str.extract(r"(\d+)").astype(int)
-        df["availed"] = df["availed"].astype(int)
+        for col in required_cols:
+            if col not in df.columns:
+                raise KeyError(f"Required column '{col}' missing from CSV")
 
-        # Add metadata
-        df["source_filename"] = file_path
+        # Convert everything to string (except metadata)
+        text_cols = ["user_id", "name", "job_title", "job_level"]
+        for col in text_cols:
+            df[col] = df[col].astype(str)
+
+        # Metadata
+        df["source_filename"] = os.path.basename(file_path)
         df["ingestion_date"] = datetime.now()
 
-        # Final insert order
-        insert_cols = [
-            "transaction_date",
-            "campaign_id",
-            "order_id",
-            "estimated_arrival",
-            "availed",
-            "source_filename",
-            "ingestion_date",
-        ]
+        # Order of columns for DB
+        insert_cols = required_cols + ["source_filename", "ingestion_date"]
 
-        # Prepare data
+        # Convert rows to tuples
         data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
 
         # Truncate table
@@ -78,7 +73,7 @@ def ingest_campaign_transactions(
             execute_values(
                 cur,
                 f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch,
+                batch
             )
             conn.commit()
 
@@ -96,4 +91,4 @@ def ingest_campaign_transactions(
 
 
 if __name__ == "__main__":
-    ingest_campaign_transactions()
+    ingest_user_job()
