@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  postgres-dw:
+    image: postgres:13
+    container_name: shopzada_postgres
+    environment:
+      POSTGRES_DB: shopzada_dw
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql_scripts:/docker-entrypoint-initdb.d # Auto-run your SQL scripts
+      - ./dataset:/dataset
+
+  etl-worker:
+    build: .
+    container_name: shopzada_etl
+    volumes:
+      - ./dataset:/app/dataset
+      - ./scripts:/app/scripts
+    environment:
+      - DB_HOST=postgres-dw
+      - DB_PORT=5432
+      - DB_NAME=shopzada_dw
+      - DB_USER=admin
+      - DB_PASS=password123
+    depends_on:
+      - postgres-dw
+    command: ["sleep", "infinity"]
+
+volumes:
+  postgres_data:
