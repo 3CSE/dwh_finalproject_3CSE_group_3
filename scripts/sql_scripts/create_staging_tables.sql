@@ -2,6 +2,9 @@
 	An SQL script to create staging tables in staging layer
 */
 
+-- Create schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS staging;
+
 --Product
 DROP TABLE IF EXISTS staging.stg_product_list;
 CREATE TABLE staging.stg_product_list(
