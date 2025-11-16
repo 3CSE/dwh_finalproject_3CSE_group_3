@@ -3,6 +3,7 @@ from datetime import datetime
 import logging
 import os
 from psycopg2 import connect
+from database_connection import get_connection
 from dotenv import load_dotenv
 
 # Load .env variables
@@ -11,26 +12,6 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CSV_FILE = "../dataset/marketing_department/campaign_data.csv"
-
-def get_connection():
-    """
-    Connect to PostgreSQL using environment variables from .env file.
-    """
-    try:
-        conn = connect(
-            host=os.environ['DB_HOST'],
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASS'],
-            port=int(os.environ.get('DB_PORT', 5432))
-        )
-        return conn
-    except KeyError as e:
-        logging.error(f"Missing required environment variable: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Failed to connect to database: {e}")
-        raise
 
 def ingest_campaign(file_path=CSV_FILE, table_name="staging.stg_campaign"):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")

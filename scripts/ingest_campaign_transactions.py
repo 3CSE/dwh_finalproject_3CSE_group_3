@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from psycopg2 import connect
 from psycopg2.extras import execute_values
+from database_connection import get_connection
 import logging
 from dotenv import load_dotenv
 
@@ -11,28 +12,8 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-CSV_FILE = "../dataset/marketing_department/transactional_campaign_data.csv"
+CSV_FILE = "./dataset/marketing_department/transactional_campaign_data.csv"
 
-
-def get_connection():
-    """
-    Connect to PostgreSQL using .env variables.
-    """
-    try:
-        conn = connect(
-            host=os.environ['DB_HOST'],
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASS'],
-            port=int(os.environ.get('DB_PORT', 5432))
-        )
-        return conn
-    except KeyError as e:
-        logging.error(f"Missing required environment variable: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Failed to connect to database: {e}")
-        raise
 
 
 def ingest_campaign_transactions(

@@ -1,18 +1,23 @@
+from psycopg2 import connect
 import os
-import psycopg2
-
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
+import logging
 
 def get_connection():
-    return psycopg2.connect(
-        host = DB_HOST,
-        port = DB_PORT,
-        database = DB_NAME,
-        user=DB_USER,
-        password = DB_PASS
-    )
-
+    """
+    Connect to PostgreSQL using .env variables.
+    """
+    try:
+        conn = connect(
+            host=os.environ['DB_HOST'],
+            database=os.environ['DB_NAME'],
+            user=os.environ['DB_USER'],
+            password=os.environ['DB_PASS'],
+            port=int(os.environ.get('DB_PORT', 5432))
+        )
+        return conn
+    except KeyError as e:
+        logging.error(f"Missing required environment variable: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Failed to connect to database: {e}")
+        raise
