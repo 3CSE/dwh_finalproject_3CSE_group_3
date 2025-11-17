@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: shopzada_dw
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_PASSWORD: user
     ports:
       - "5432:5432"
     volumes:
@@ -26,7 +26,7 @@ services:
       DB_PORT: 5432
       DB_NAME: shopzada_dw
       DB_USER: admin
-      DB_PASS: ${DB_PASS}
+      DB_PASS: user
     depends_on:
       - postgres-dw
     command: ["sleep", "infinity"]
