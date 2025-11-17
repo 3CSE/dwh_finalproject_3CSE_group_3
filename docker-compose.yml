@@ -7,7 +7,6 @@ services:
     environment:
       POSTGRES_DB: shopzada_dw
       POSTGRES_USER: admin
-      # Note: Use ${DB_PASSWORD} here as well if you are using a .env file for secrets
       POSTGRES_PASSWORD: ${DB_PASS}
     ports:
       - "5432:5432"

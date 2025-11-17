@@ -16,9 +16,9 @@ logging.basicConfig(
 
 # Paths to raw files
 RAW_FILES = [
-    "./dataset/operations_department/line_item_data_products1.csv",
-    "./dataset/operations_department/line_item_data_products2.csv",
-    "./dataset/operations_department/line_item_data_products3.parquet"
+    "/app/dataset/operations_department/line_item_data_products1.csv",
+    "/app/dataset/operations_department/line_item_data_products2.csv",
+    "/app/dataset/operations_department/line_item_data_products3.parquet"
 ]
 
 def load_file(file_path: str) -> pd.DataFrame:
