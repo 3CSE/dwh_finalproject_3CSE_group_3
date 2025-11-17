@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 # Path to data file
-HTML_FILE = "./dataset/operations_department/order_delays.html"
+HTML_FILE = "/app/dataset/operations_department/order_delays.html"
 
 def ingest_order_delays(
     file_path=HTML_FILE,

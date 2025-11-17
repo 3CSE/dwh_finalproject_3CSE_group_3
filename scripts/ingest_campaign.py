@@ -11,7 +11,7 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-CSV_FILE = "../dataset/marketing_department/campaign_data.csv"
+CSV_FILE = "/app/dataset/marketing_department/campaign_data.csv"
 
 def ingest_campaign(file_path=CSV_FILE, table_name="staging.stg_campaign"):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")

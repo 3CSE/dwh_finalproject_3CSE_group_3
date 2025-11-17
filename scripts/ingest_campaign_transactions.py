@@ -12,7 +12,7 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-CSV_FILE = "./dataset/marketing_department/transactional_campaign_data.csv"
+CSV_FILE = "/app/dataset/marketing_department/transactional_campaign_data.csv"
 
 
 

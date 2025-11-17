@@ -7,12 +7,13 @@ services:
     environment:
       POSTGRES_DB: shopzada_dw
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
+      # Note: Use ${DB_PASSWORD} here as well if you are using a .env file for secrets
+      POSTGRES_PASSWORD: ${DB_PASS}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql_scripts:/docker-entrypoint-initdb.d # Auto-run your SQL scripts
+      - ./sql:/docker-entrypoint-initdb.d
       - ./dataset:/dataset
 
   etl-worker:
@@ -22,11 +23,11 @@ services:
       - ./dataset:/app/dataset
       - ./scripts:/app/scripts
     environment:
-      - DB_HOST=postgres-dw
-      - DB_PORT=5432
-      - DB_NAME=shopzada_dw
-      - DB_USER=admin
-      - DB_PASS=password123
+      DB_HOST: postgres-dw
+      DB_PORT: 5432
+      DB_NAME: shopzada_dw
+      DB_USER: admin
+      DB_PASS: ${DB_PASS}
     depends_on:
       - postgres-dw
     command: ["sleep", "infinity"]

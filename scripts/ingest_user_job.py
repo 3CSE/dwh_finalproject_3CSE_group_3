@@ -14,7 +14,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-CSV_FILE = "./dataset/customer_management_department/user_job.csv"
+CSV_FILE = "/app/dataset/customer_management_department/user_job.csv"
 
 def ingest_user_job(
     file_path=CSV_FILE,

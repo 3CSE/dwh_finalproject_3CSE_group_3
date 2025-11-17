@@ -13,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-FILE_PATH = "./dataset/enterprise_department/staff_data.html"
+FILE_PATH = "/app/dataset/enterprise_department/staff_data.html"
 
 
 def ingest_staff(

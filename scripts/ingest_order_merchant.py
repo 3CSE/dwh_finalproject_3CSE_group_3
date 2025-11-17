@@ -13,7 +13,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Folder containing the order_merchant data files
-DATA_DIR = os.path.join("..", "dataset", "enterprise_department")
+DATA_DIR = os.path.join("/app", "dataset", "enterprise_department")
 
 # Scan folder for CSV and Parquet files
 FILES = [

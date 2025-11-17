@@ -13,7 +13,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Folder containing JSON file
-DATA_DIR = os.path.join("..", "dataset", "customer_management_department")
+DATA_DIR = os.path.join("/app", "dataset", "customer_management_department")
 FILE_PATH = os.path.join(DATA_DIR, "user_data.json")
 
 def get_connection():

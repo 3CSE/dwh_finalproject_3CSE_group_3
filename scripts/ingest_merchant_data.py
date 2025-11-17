@@ -12,7 +12,7 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-HTML_FILE = "../dataset/enterprise_department/merchant_data.html"
+HTML_FILE = "/app/dataset/enterprise_department/merchant_data.html"
 
 def ingest_merchant_data(
     file_path=HTML_FILE,

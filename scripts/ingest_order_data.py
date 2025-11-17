@@ -16,12 +16,12 @@ logging.basicConfig(
 
 # Paths to raw files
 RAW_FILES = [
-    "./dataset/operations_department/order_data_20200701-20211001.pickle",
-    "./dataset/operations_department/order_data_20220101-20221201.xlsx",
-    "./dataset/operations_department/order_data_20200101-20200701.parquet",
-    "./dataset/operations_department/order_data_20211001-20220101.csv",
-    "./dataset/operations_department/order_data_20221201-20230601.json",
-    "./dataset/operations_department/order_data_20230601-20240101.html"
+    "/app/dataset/operations_department/order_data_20200701-20211001.pickle",
+    "/app/dataset/operations_department/order_data_20220101-20221201.xlsx",
+    "/app/dataset/operations_department/order_data_20200101-20200701.parquet",
+    "/app/dataset/operations_department/order_data_20211001-20220101.csv",
+    "/app/dataset/operations_department/order_data_20221201-20230601.json",
+    "/app/dataset/operations_department/order_data_20230601-20240101.html"
 ]
 
 def load_file(file_path: str) -> pd.DataFrame:

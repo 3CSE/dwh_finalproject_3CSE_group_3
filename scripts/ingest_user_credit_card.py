@@ -12,7 +12,7 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-DATA_DIR = os.path.join("..", "dataset", "customer_management_department")
+DATA_DIR = os.path.join("/app", "dataset", "customer_management_department")
 FILE_PATH = os.path.join(DATA_DIR, "user_credit_card.pickle")
 
 def get_connection():

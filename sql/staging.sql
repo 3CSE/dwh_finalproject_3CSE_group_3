@@ -96,7 +96,7 @@ DROP TABLE IF EXISTS staging.stg_user_credit_card;
 CREATE TABLE staging.stg_user_credit_card(
 	user_id TEXT,
 	name TEXT,
-	credit_card_number INT,
+	credit_card_number TEXT,
 	issuing_bank TEXT,
 	-- additional metadata for data lineage/tracking
 	source_filename TEXT,
