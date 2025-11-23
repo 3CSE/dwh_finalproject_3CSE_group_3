@@ -1,10 +1,9 @@
 import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 import logging
-from scripts.database_connection import get_connection
+
+from scripts.file_loader import load_file
+from scripts.universal_ingest import ingest
 
 # Load environment variables
 load_dotenv()
@@ -12,67 +11,65 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Folder containing JSON file
-DATA_DIR = os.path.join("/app", "dataset", "customer_management_department")
-FILE_PATH = os.path.join(DATA_DIR, "user_data.json")
+# Folder containing all customer management files
+DATA_DIR = "/app/dataset/customer_management_department"
 
-def ingest_user_data(file_path=FILE_PATH, table_name="staging.stg_user_data", batch_size=5000):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+# Table and required columns
+TABLE_NAME = "staging.stg_user_data"
+REQUIRED_COLS = [
+    "user_id",
+    "creation_date",
+    "name",
+    "street",
+    "state",
+    "city",
+    "country",
+    "birthdate",
+    "gender",
+    "device_address",
+    "user_type"
+]
 
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+BATCH_SIZE = 5000
+
+def find_valid_files(folder_path, required_cols):
+    """Scan a folder and return files that contain the required columns."""
+    valid_files = []
+    all_files = [
+        os.path.join(folder_path, f)
+        for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f))
+    ]
+
+    for file_path in all_files:
+        try:
+            df = load_file(file_path)
+            # Normalize columns
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            required_cols_lower = [c.lower() for c in required_cols]
+
+            if all(col in df.columns for col in required_cols_lower):
+                valid_files.append(file_path)
+            else:
+                logging.warning(f"Skipping {file_path}, missing required columns.")
+        except Exception as e:
+            logging.warning(f"Skipping {file_path}, cannot load file: {e}")
+
+    return valid_files
+
+def ingest_user_data_files():
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for {TABLE_NAME}")
         return
 
-
-    try:
-        # Truncate table
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-        logging.info(f"Truncated table {table_name} before ingestion")
-        
-        # Load JSON
-        df = pd.read_json(file_path)
-
-        # Strip whitespace from column names
-        df.columns = df.columns.str.strip()
-
-        # Example: minimal cleaning for staging
-        for col in df.columns:
-            df[col] = df[col].astype(str)
-
-        # Add metadata
-        df["source_filename"] = os.path.basename(file_path)
-        df["ingestion_date"] = datetime.now()
-
-        # Prepare for batch insert
-        insert_cols = list(df.columns)
-        data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-        # Insert in batches
-        for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i:i + batch_size]
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch
-            )
-            conn.commit()
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
-
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted from {file_path}")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE
+    )
 
 if __name__ == "__main__":
-    ingest_user_data()
+    ingest_user_data_files()

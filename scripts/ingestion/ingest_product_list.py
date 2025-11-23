@@ -1,90 +1,62 @@
 import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
-from scripts.database_connection import get_connection
 from dotenv import load_dotenv
 import logging
 
+from scripts.file_loader import load_file
+from scripts.universal_ingest import ingest
+
+# Load environment variables
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-FILE_PATH = "./dataset/business_department/product_list.xlsx"
+# Directory containing product list files
+DATA_DIR = "/app/dataset/business_department"
 
+# Table and required columns
+TABLE_NAME = "staging.stg_product_list"
+REQUIRED_COLS = ["product_id", "product_name", "product_type", "price"]
+BATCH_SIZE = 5000
 
-def ingest_product_list(
-    file_path=FILE_PATH,
-    table_name="staging.stg_product_list",
-    batch_size=5000
-):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+def find_valid_files(folder_path, required_cols):
+    """Scan a folder and return files that contain the required columns."""
+    valid_files = []
+    all_files = [
+        os.path.join(folder_path, f)
+        for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f))
+    ]
 
-    # connect to database
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception as e:
-        logging.error(f"DB connection failed: {e}")
+    for file_path in all_files:
+        try:
+            df = load_file(file_path)
+            # Normalize columns
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            required_cols_lower = [c.lower() for c in required_cols]
+
+            if all(col in df.columns for col in required_cols_lower):
+                valid_files.append(file_path)
+            else:
+                logging.warning(f"Skipping {file_path}, missing required columns.")
+        except Exception as e:
+            logging.warning(f"Skipping {file_path}, cannot load file: {e}")
+
+    return valid_files
+
+def ingest_product_list():
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for {TABLE_NAME}")
         return
 
-    try:
-        # read file
-        df = pd.read_excel(file_path, index_col=0)
-        df.columns = df.columns.str.strip()
-
-
-        # Add ingestion metadata
-        df["source_filename"] = os.path.basename(file_path)
-        df["ingestion_date"] = datetime.now()
-
-        #Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-
-        # Insert order
-        insert_cols = [
-            "product_id",
-            "product_name",
-            "product_type",
-            "price",
-            "source_filename",
-            "ingestion_date"
-        ]
-
-        # Convert df rows to tuples
-        rows = [tuple(x) for x in df[insert_cols].to_numpy()]
-
-        logging.info(f"Prepared {len(rows)} rows for insertion")
-
-        # Batch insert
-        for i in range(0, len(rows), batch_size):
-            batch = rows[i : i + batch_size]
-
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch,
-            )
-            conn.commit()
-
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
-
-        logging.info(f"INGESTION COMPLETE — {len(rows)} rows inserted.")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE
+    )
 
 if __name__ == "__main__":
     ingest_product_list()
