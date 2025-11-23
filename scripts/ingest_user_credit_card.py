@@ -1,10 +1,11 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 import logging
+
+from scripts.database_connection import get_connection
 
 # Load environment variables
 load_dotenv()
@@ -14,21 +15,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 DATA_DIR = os.path.join("/app", "dataset", "customer_management_department")
 FILE_PATH = os.path.join(DATA_DIR, "user_credit_card.pickle")
-
-def get_connection():
-    """Connect to PostgreSQL using environment variables."""
-    try:
-        conn = connect(
-            host=os.environ['DB_HOST'],
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASS'],
-            port=int(os.environ.get('DB_PORT', 5432))
-        )
-        return conn
-    except Exception as e:
-        logging.error(f"Database connection error: {e}")
-        raise
 
 def ingest_user_credit_card(table_name="staging.stg_user_credit_card", batch_size=5000):
     logging.info(f"Starting ingestion for {FILE_PATH} into {table_name}")
