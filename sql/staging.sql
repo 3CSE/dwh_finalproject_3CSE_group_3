@@ -88,7 +88,7 @@ CREATE TABLE staging.stg_user_job(
 	job_title TEXT,
 	job_level TEXT,
 	-- additional metadata for data lineage/tracking
-	source_filename VARCHAR (50),
+	source_filename TEXT,
 	ingestion_date TIMESTAMP
 );
 
