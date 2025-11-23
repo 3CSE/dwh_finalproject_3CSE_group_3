@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 
+# Handles all file types. Add more file type if needed.
 def load_file(file_path: str) -> pd.DataFrame:
     ext = os.path.splitext(file_path)[1].lower()
 
