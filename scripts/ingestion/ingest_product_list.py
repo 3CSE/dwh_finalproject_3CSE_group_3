@@ -1,123 +1,62 @@
 import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from scripts.database_connection import get_connection
 import logging
 
-# Load .env variables
+from scripts.file_loader import load_file
+from scripts.universal_ingest import ingest
+
+# Load environment variables
 load_dotenv()
 
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-HTML_FILE = "/app/dataset/enterprise_department/staff_data.html"
+# Directory containing product list files
+DATA_DIR = "/app/dataset/business_department"
 
+# Table and required columns
+TABLE_NAME = "staging.stg_product_list"
+REQUIRED_COLS = ["product_id", "product_name", "product_type", "price"]
+BATCH_SIZE = 5000
 
-def ingest_staff_data(
-    file_path=HTML_FILE,
-    table_name="staging.stg_staff",
-    batch_size=5000
-):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+def find_valid_files(folder_path, required_cols):
+    """Scan a folder and return files that contain the required columns."""
+    valid_files = []
+    all_files = [
+        os.path.join(folder_path, f)
+        for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f))
+    ]
 
-    # Database connection
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+    for file_path in all_files:
+        try:
+            df = load_file(file_path)
+            # Normalize columns
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            required_cols_lower = [c.lower() for c in required_cols]
+
+            if all(col in df.columns for col in required_cols_lower):
+                valid_files.append(file_path)
+            else:
+                logging.warning(f"Skipping {file_path}, missing required columns.")
+        except Exception as e:
+            logging.warning(f"Skipping {file_path}, cannot load file: {e}")
+
+    return valid_files
+
+def ingest_product_list():
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for {TABLE_NAME}")
         return
 
-    try:
-        # Read HTML files
-        with open(file_path, "r", encoding="utf-8") as f:
-            df = pd.read_html(f.read())[0]
-
-        # Drop index column if present
-        if (
-            df.columns[0] == 0 or
-            df.columns[0] == '' or
-            str(df.columns[0]).startswith("Unnamed")
-        ):
-            df = df.iloc[:, 1:]
-
-        # Normalize column names
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-        # required column checks
-        required_cols = [
-            "staff_id",
-            "name",
-            "job_level",
-            "street",
-            "state",
-            "city",
-            "country",
-            "contact_number",
-            "creation_date"
-        ]
-
-        for col in required_cols:
-            if col not in df.columns:
-                raise KeyError(f"Required column '{col}' not found in HTML")
-
-        # Convert date column
-        df["creation_date"] = pd.to_datetime(df["creation_date"])
-
-        # Convert all text-like fields to string
-        text_cols = [
-            "staff_id",
-            "name",
-            "job_level",
-            "street",
-            "state",
-            "city",
-            "country",
-            "contact_number"
-        ]
-        for col in text_cols:
-            df[col] = df[col].astype(str)
-
-        # Add metadata
-        df["source_filename"] = os.path.basename(file_path)
-        df["ingestion_date"] = datetime.now()
-
-        # Final order for inserting
-        insert_cols = required_cols + ["source_filename", "ingestion_date"]
-
-        # Prepare tuples
-        data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-        # Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-
-        # Batch insert
-        for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i:i + batch_size]
-
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch
-            )
-            conn.commit()
-
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
-
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE
+    )
 
 if __name__ == "__main__":
-    ingest_staff_data()
+    ingest_product_list()

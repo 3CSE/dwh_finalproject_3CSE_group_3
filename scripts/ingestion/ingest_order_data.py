@@ -1,135 +1,56 @@
 import os
-import pandas as pd
 from datetime import datetime
-from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from scripts.database_connection import get_connection
 import logging
+from scripts.file_loader import load_file
+from scripts.universal_ingest import ingest
 
 # Load environment variables
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+# Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Paths to raw files
-RAW_FILES = [
-    "/app/dataset/operations_department/order_data_20200701-20211001.pickle",
-    "/app/dataset/operations_department/order_data_20220101-20221201.xlsx",
-    "/app/dataset/operations_department/order_data_20200101-20200701.parquet",
-    "/app/dataset/operations_department/order_data_20211001-20220101.csv",
-    "/app/dataset/operations_department/order_data_20221201-20230601.json",
-    "/app/dataset/operations_department/order_data_20230601-20240101.html"
-]
+# Folder containing order files
+DATA_DIR = "/app/dataset/operations_department"
 
-def load_file(file_path: str) -> pd.DataFrame:
-    #Load data from various formats into a DataFrame
-    ext = os.path.splitext(file_path)[1].lower()
-    
-    if ext in [".pkl", ".pickle"]:
-        return pd.read_pickle(file_path)
-    elif ext == ".xlsx":
-        return pd.read_excel(file_path)
-    elif ext == ".parquet":
-        return pd.read_parquet(file_path)
-    elif ext == ".csv":
-        return pd.read_csv(file_path)
-    elif ext == ".json":
-        return pd.read_json(file_path)
-    elif ext == ".html":
-        dfs = pd.read_html(file_path)
-        if len(dfs) == 0:
-            raise ValueError(f"No tables found in HTML file: {file_path}")
-        return dfs[0]
-    else:
-        raise ValueError(f"Unsupported file format: {ext}")
+# Table and required columns
+TABLE_NAME = "staging.stg_orders"
+REQUIRED_COLS = ["order_id", "user_id", "estimated_arrival", "transaction_date"]
+BATCH_SIZE = 5000
 
+def find_valid_files(folder_path, required_cols):
+    valid_files = []
+    all_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
 
-def ingest_orders(
-    file_paths=RAW_FILES,
-    table_name="staging.stg_orders",
-    batch_size=5000
-):
-
-    logging.info(f"Starting ingestion into {table_name}")
-
-    # Connect to database
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
-        return
-
-    total_rows_inserted = 0
-
-    try:
-        # Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-        for file_path in file_paths:
-            logging.info(f"Processing file: {file_path}")
-
+    for file_path in all_files:
+        try:
             df = load_file(file_path)
-
             # Drop unnamed index columns if present
             df = df.loc[:, ~df.columns.str.contains("^unnamed")]
-
-            # Normalize column names
+            # Normalize columns
             df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            if all(col in df.columns for col in required_cols):
+                valid_files.append(file_path)
+            else:
+                logging.warning(f"Skipping {file_path}, missing required columns")
+        except Exception as e:
+            logging.warning(f"Skipping {file_path}, cannot load file: {e}")
+    return valid_files
 
-            required_cols = ["order_id", "user_id", "estimated_arrival", "transaction_date"]
+def ingest_orders():
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
 
-            for col in required_cols:
-                if col not in df.columns:
-                    raise KeyError(f"Required column '{col}' missing in file {file_path}")
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for {TABLE_NAME}")
+        return
 
-            # Convert data types
-            df["order_id"] = df["order_id"].astype(str)
-            df["user_id"] = df["user_id"].astype(str)
-            df["estimated_arrival"] = df["estimated_arrival"].astype(str)
-            df["transaction_date"] = pd.to_datetime(df["transaction_date"]).dt.date
-
-            # Metadata
-            df["source_filename"] = os.path.basename(file_path)
-            df["ingestion_date"] = datetime.now()
-
-            insert_cols = required_cols + ["source_filename", "ingestion_date"]
-
-            # Convert to tuples
-            data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-            # Batch insert
-            for i in range(0, len(data_tuples), batch_size):
-                batch = data_tuples[i:i + batch_size]
-
-                execute_values(
-                    cur,
-                    f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                    batch
-                )
-                conn.commit()
-
-                logging.info(
-                    f"{os.path.basename(file_path)}: Inserted rows {i+1} to {i+len(batch)}"
-                )
-
-            total_rows_inserted += len(data_tuples)
-
-        logging.info(f"Ingestion complete — Total rows inserted: {total_rows_inserted}")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE
+    )
 
 if __name__ == "__main__":
     ingest_orders()

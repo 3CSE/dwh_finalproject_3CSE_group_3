@@ -1,118 +1,55 @@
 import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from scripts.database_connection import get_connection
 import logging
+
+from scripts.file_loader import load_file
+from scripts.universal_ingest import ingest
 
 # Load environment variables
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Paths to raw files
-RAW_FILES = [
-    "/app/dataset/operations_department/line_item_data_products1.csv",
-    "/app/dataset/operations_department/line_item_data_products2.csv",
-    "/app/dataset/operations_department/line_item_data_products3.parquet"
-]
+# Folder containing all operations department line item files
+DATA_DIR = "/app/dataset/operations_department"
 
-def load_file(file_path: str) -> pd.DataFrame:
-    #Load CSV or Parquet depending on file extension.
-    ext = os.path.splitext(file_path)[1].lower()
+# Table and required columns
+TABLE_NAME = "staging.stg_line_items_products"
+REQUIRED_COLS = ["order_id", "product_name", "product_id"]
+BATCH_SIZE = 5000
 
-    if ext == ".csv":
-        return pd.read_csv(file_path)
-    elif ext == ".parquet":
-        return pd.read_parquet(file_path)
-    else:
-        raise ValueError(f"Unsupported file format: {ext}")
+def find_valid_files(folder_path, required_cols):
+    valid_files = []
 
+    all_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) 
+                 if os.path.isfile(os.path.join(folder_path, f))]
 
-def ingest_line_item_products(
-    file_paths=RAW_FILES,
-    table_name="staging.stg_line_items_products",
-    batch_size=5000
-):
+    for file_path in all_files:
+        try:
+            df = load_file(file_path)
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            if all(col in df.columns for col in required_cols):
+                valid_files.append(file_path)
+            else:
+                logging.warning(f"Skipping {file_path}, missing required columns.")
+        except Exception as e:
+            logging.warning(f"Skipping {file_path}, cannot load file: {e}")
 
-    logging.info(f"Starting ingestion into {table_name}")
+    return valid_files
 
-    # Connect to database
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+def ingest_line_item_products():
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for {TABLE_NAME}")
         return
 
-    total_rows_inserted = 0
-
-    try:
-        # Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-
-        for file_path in file_paths:
-            logging.info(f"Processing file: {file_path}")
-
-            df = load_file(file_path)
-
-            # Normalize column names
-            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-            required_cols = ["order_id", "product_name", "product_id"]
-
-            for col in required_cols:
-                if col not in df.columns:
-                    raise KeyError(f"Required column '{col}' missing in file {file_path}")
-
-            # Convert data types
-            df["order_id"] = df["order_id"].astype(str)
-            df["product_id"] = df["product_id"].astype(str)
-            df["product_name"] = df["product_name"].astype(str)
-
-            # Metadata
-            df["source_filename"] = os.path.basename(file_path)
-            df["ingestion_date"] = datetime.now()
-
-            insert_cols = required_cols + ["source_filename", "ingestion_date"]
-
-            # Convert to tuples
-            data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-            # Batch insert
-            for i in range(0, len(data_tuples), batch_size):
-                batch = data_tuples[i:i + batch_size]
-
-                execute_values(
-                    cur,
-                    f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                    batch
-                )
-                conn.commit()
-
-                logging.info(
-                    f"{os.path.basename(file_path)}: Inserted rows {i+1} to {i+len(batch)}"
-                )
-
-            total_rows_inserted += len(data_tuples)
-
-        logging.info(f"Ingestion complete — Total rows inserted: {total_rows_inserted}")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE
+    )
 
 if __name__ == "__main__":
     ingest_line_item_products()
