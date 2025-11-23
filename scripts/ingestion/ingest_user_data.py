@@ -1,10 +1,10 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 import logging
+from scripts.database_connection import get_connection
 
 # Load environment variables
 load_dotenv()
@@ -16,24 +16,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 DATA_DIR = os.path.join("/app", "dataset", "customer_management_department")
 FILE_PATH = os.path.join(DATA_DIR, "user_data.json")
 
-def get_connection():
-    """Connect to PostgreSQL using environment variables."""
-    try:
-        conn = connect(
-            host=os.environ['DB_HOST'],
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASS'],
-            port=int(os.environ.get('DB_PORT', 5432))
-        )
-        return conn
-    except KeyError as e:
-        logging.error(f"Missing environment variable: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Failed to connect to database: {e}")
-        raise
-
 def ingest_user_data(file_path=FILE_PATH, table_name="staging.stg_user_data", batch_size=5000):
     logging.info(f"Starting ingestion for {file_path} into {table_name}")
 
@@ -41,17 +23,17 @@ def ingest_user_data(file_path=FILE_PATH, table_name="staging.stg_user_data", ba
         conn = get_connection()
         cur = conn.cursor()
         logging.info("Database connection successful")
-
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-        logging.info(f"Truncated table {table_name} before ingestion")
-
     except Exception:
         logging.error("Cannot proceed without database connection")
         return
 
 
     try:
+        # Truncate table
+        cur.execute(f"TRUNCATE TABLE {table_name}")
+        conn.commit()
+        logging.info(f"Truncated table {table_name} before ingestion")
+        
         # Load JSON
         df = pd.read_json(file_path)
 
