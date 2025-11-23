@@ -6,6 +6,11 @@ import logging
 from scripts.file_loader import load_file
 from scripts.database_connection import get_connection
 
+'''
+Call this universal_ingest.py for every ingestion script.
+
+'''
+
 # configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +35,7 @@ def ingest(file_paths, table_name, required_cols, batch_size=5000):
 
     logging.info(f"Starting ingestion into table {table_name}")
 
+    # Connect to database
     try:
         conn = get_connection()
         cur = conn.cursor()

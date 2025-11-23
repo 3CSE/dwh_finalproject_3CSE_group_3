@@ -41,7 +41,7 @@ def find_valid_files(folder_path, required_cols):
     return valid_files         
 
 # method parameters: file_paths, table_name, required_cols, batch_size
-def ingest_user_credit_card(table_name="staging.stg_user_credit_card", batch_size=5000):
+def ingest_user_credit_card():
     valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
 
     if not valid_files:
