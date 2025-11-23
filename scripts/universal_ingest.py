@@ -47,6 +47,10 @@ def ingest(file_paths, table_name, required_cols, batch_size=5000):
     total_rows_inserted = 0
 
     try:
+        # Truncate table 
+        logging.info(f"Truncating table {table_name}")
+        cur.execute(f"TRUNCATE TABLE {table_name}")
+        conn.commit()
         for file_path in file_paths:
             logging.info(f"Processing file: {file_path}")
 
@@ -69,11 +73,6 @@ def ingest(file_paths, table_name, required_cols, batch_size=5000):
 
             insert_cols = [c.lower() for c in required_cols] + ["source_filename", "ingestion_date"]
             data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-            # Truncate table before batch inserts
-            logging.info(f"Truncating table {table_name}")
-            cur.execute(f"TRUNCATE TABLE {table_name}")
-            conn.commit()
 
             # Batch insert
             batch_insert(cur, table_name, data_tuples, insert_cols, batch_size)

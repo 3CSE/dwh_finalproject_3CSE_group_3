@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 import logging
 
 # Load environment variables
@@ -53,6 +53,10 @@ def ingest_line_item_prices(
     total_rows_inserted = 0
 
     try:
+        # Truncate table
+        logging.info(f"Truncating table {table_name}")
+        cur.execute(f"TRUNCATE TABLE {table_name}")
+        conn.commit()
         for file_path in file_paths:
             logging.info(f"Processing file: {file_path}")
 
@@ -84,11 +88,6 @@ def ingest_line_item_prices(
 
             # Convert to tuples
             data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-            # Truncate table
-            logging.info(f"Truncating table {table_name}")
-            cur.execute(f"TRUNCATE TABLE {table_name}")
-            conn.commit()
 
             # Batch insert
             for i in range(0, len(data_tuples), batch_size):

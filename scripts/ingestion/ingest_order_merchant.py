@@ -1,30 +1,44 @@
 import os
 import pandas as pd
 from datetime import datetime
-from database_connection import get_connection
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
+from scripts.database_connection import get_connection
 import logging
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# Folder containing the order_merchant data files
-DATA_DIR = os.path.join("/app", "dataset", "enterprise_department")
-
-# Scan folder for CSV and Parquet files
-FILES = [
-    os.path.join(DATA_DIR, f)
-    for f in os.listdir(DATA_DIR)
-    if f.lower().endswith(".csv") or f.lower().endswith(".parquet")
+ORDER_MERCHANT_FILES = [
+    "/app/dataset/enterprise_department/order_with_merchant_data1.parquet",
+    "/app/dataset/enterprise_department/order_with_merchant_data2.parquet",
+    "/app/dataset/enterprise_department/order_with_merchant_data3.csv"
 ]
 
-def ingest_order_merchant(file_path, table_name="staging.stg_order_merchant", batch_size=5000):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+def load_merchant_file(file_path: str) -> pd.DataFrame:
+    ext = os.path.splitext(file_path)[1].lower()
 
+    if ext == ".csv":
+        return pd.read_csv(file_path)
+    elif ext == ".parquet":
+        return pd.read_parquet(file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_path}")
+
+
+def ingest_order_merchant(
+    file_paths=ORDER_MERCHANT_FILES,
+    table_name="staging.stg_order_merchant",
+    batch_size=5000
+):
+    logging.info(f"Starting ingestion into {table_name}")
+
+    # Database connection
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -33,55 +47,64 @@ def ingest_order_merchant(file_path, table_name="staging.stg_order_merchant", ba
         logging.error("Cannot proceed without database connection")
         return
 
+    total_rows_inserted = 0
+
     try:
-        # Read the file based on its extension
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext == ".csv":
-            df = pd.read_csv(file_path)
-        elif ext == ".parquet":
-            df = pd.read_parquet(file_path)
-        else:
-            logging.warning(f"Unsupported file type: {file_path}")
-            return
-
-        # Strip whitespace from column names
-        df.columns = df.columns.str.strip()
-
-        # Ensure required columns exist
-        required_cols = ["order_id", "merchant_id", "staff_id"]
-        for col in required_cols:
-            if col not in df.columns:
-                raise KeyError(f"Required column '{col}' not found in {file_path}")
-
-        # Convert all to strings
-        for col in required_cols:
-            df[col] = df[col].astype(str)
-
-        # Add metadata
-        df["source_filename"] = file_path
-        df["ingestion_date"] = datetime.now()
-
-        # Prepare for batch insert
-        insert_cols = required_cols + ["source_filename", "ingestion_date"]
-        data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
         # Truncate table
         logging.info(f"Truncating table {table_name}")
         cur.execute(f"TRUNCATE TABLE {table_name}")
         conn.commit()
 
-        # Insert in batches
-        for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i:i + batch_size]
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch
-            )
-            conn.commit()
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
+        for file_path in file_paths:
+            logging.info(f"Processing file: {file_path}")
 
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted from {file_path}")
+            df = load_merchant_file(file_path)
+
+            # Strip column whitespace
+            df.columns = df.columns.str.strip()
+
+            # Required columns
+            required_cols = ["order_id", "merchant_id", "staff_id"]
+
+            for col in required_cols:
+                if col not in df.columns:
+                    raise KeyError(
+                        f"Required column '{col}' not found in: {file_path}"
+                    )
+
+            # Standardize data types
+            for col in required_cols:
+                df[col] = df[col].astype(str)
+
+            # Metadata columns
+            df["source_filename"] = os.path.basename(file_path)
+            df["ingestion_date"] = datetime.now()
+
+            insert_cols = required_cols + ["source_filename", "ingestion_date"]
+
+            # Convert to list-of-tuples 
+            data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
+
+            # Batch insert
+            for i in range(0, len(data_tuples), batch_size):
+                batch = data_tuples[i:i + batch_size]
+
+                execute_values(
+                    cur,
+                    f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
+                    batch
+                )
+                conn.commit()
+
+                logging.info(
+                    f"{os.path.basename(file_path)} → Inserted rows {i+1} to {i+len(batch)}"
+                )
+
+            total_rows_inserted += len(data_tuples)
+
+        logging.info(
+            f"Ingestion complete — Total rows inserted: {total_rows_inserted}"
+        )
 
     except Exception as e:
         logging.error(f"Error during ingestion: {e}")
@@ -93,8 +116,4 @@ def ingest_order_merchant(file_path, table_name="staging.stg_order_merchant", ba
 
 
 if __name__ == "__main__":
-    if not FILES:
-        logging.warning(f"No CSV or Parquet files found in folder: {DATA_DIR}")
-    else:
-        for file in FILES:
-            ingest_order_merchant(file)
+    ingest_order_merchant()
