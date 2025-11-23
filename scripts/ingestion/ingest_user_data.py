@@ -45,7 +45,7 @@ def ingest_user_data(file_path=FILE_PATH, table_name="staging.stg_user_data", ba
             df[col] = df[col].astype(str)
 
         # Add metadata
-        df["source_filename"] = file_path
+        df["source_filename"] = os.path.basename(file_path)
         df["ingestion_date"] = datetime.now()
 
         # Prepare for batch insert

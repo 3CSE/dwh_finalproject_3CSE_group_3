@@ -3,10 +3,8 @@ import pandas as pd
 from datetime import datetime
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 import logging
-from bs4 import MarkupResemblesLocatorWarning
-import warnings
 
 # Load .env variables
 load_dotenv()
@@ -83,7 +81,7 @@ def ingest_staff_data(
             df[col] = df[col].astype(str)
 
         # Add metadata
-        df["source_filename"] = file_path
+        df["source_filename"] = os.path.basename(file_path)
         df["ingestion_date"] = datetime.now()
 
         # Final order for inserting

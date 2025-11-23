@@ -1,9 +1,8 @@
+import os
 import csv
 from datetime import datetime
 import logging
-import os
-from psycopg2 import connect
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 from dotenv import load_dotenv
 
 # Load .env variables
@@ -59,7 +58,7 @@ def ingest_campaign(file_path=CSV_FILE, table_name="staging.stg_campaign"):
                 (campaign_id, campaign_name, campaign_description, discount, source_filename, ingestion_date)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (row[0].strip(), row[1].strip(), row[2].strip(), row[3].strip(), file_path, datetime.now())
+                (row[0].strip(), row[1].strip(), row[2].strip(), row[3].strip(), os.path.basename(file_path), datetime.now())
             )
 
         conn.commit()

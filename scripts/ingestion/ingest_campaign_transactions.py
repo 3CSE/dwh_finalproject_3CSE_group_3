@@ -1,9 +1,8 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 import logging
 from dotenv import load_dotenv
 
@@ -49,7 +48,7 @@ def ingest_campaign_transactions(
         df["availed"] = df["availed"].astype(int)
 
         # Add metadata
-        df["source_filename"] = file_path
+        df["source_filename"] = os.path.basename(file_path)
         df["ingestion_date"] = datetime.now()
 
         # Final insert order

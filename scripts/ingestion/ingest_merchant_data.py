@@ -1,10 +1,9 @@
 import os
 import pandas as pd
 from datetime import datetime
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 import logging
 
 # Load .env variables
@@ -66,7 +65,7 @@ def ingest_merchant_data(
             df[col] = df[col].astype(str)
 
         # Metadata
-        df['source_filename'] = file_path
+        df['source_filename'] = os.path.basename(file_path)
         df['ingestion_date'] = datetime.now()
 
         # Order of columns for DB
