@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 import logging
 
 # Load environment variables

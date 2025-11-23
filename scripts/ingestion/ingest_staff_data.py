@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 from psycopg2.extras import execute_values
-from database_connection import get_connection
+from scripts.database_connection import get_connection
 from dotenv import load_dotenv
 import logging
 
