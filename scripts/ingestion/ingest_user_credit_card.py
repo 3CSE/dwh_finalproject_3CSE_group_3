@@ -32,7 +32,7 @@ def find_valid_files(folder_path, required_cols):
             df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
             # Check if required columns exist
             required_cols_lower = [c.lower() for c in required_cols]
-            if all(col in df.columns for col in required_cols):
+            if all(col in df.columns for col in required_cols_lower):
                 valid_files.append(file_path)
             else:
                 logging.warning(f"Skipping {file_path}, missing required columns.")
