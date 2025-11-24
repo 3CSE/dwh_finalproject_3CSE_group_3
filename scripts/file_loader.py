@@ -1,13 +1,20 @@
 import pandas as pd
 import os
+import csv
 
-# Handles all file types. Add more file type if needed.
-def load_file(file_path: str) -> pd.DataFrame:
+def load_file(file_path: str, delimiter=None) -> pd.DataFrame:
     ext = os.path.splitext(file_path)[1].lower()
 
     try:
         if ext == ".csv":
-            return pd.read_csv(file_path)
+            if delimiter is None:
+                # Auto-detect delimiter
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    sample = f.read(1024)  # read first 1KB for detection
+                    sniffer = csv.Sniffer()
+                    dialect = sniffer.sniff(sample)
+                    delimiter = dialect.delimiter
+            return pd.read_csv(file_path, delimiter=delimiter)
 
         elif ext == ".parquet":
             return pd.read_parquet(file_path)
