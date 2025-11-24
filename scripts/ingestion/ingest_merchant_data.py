@@ -1,107 +1,41 @@
-import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
-from dotenv import load_dotenv
-from scripts.database_connection import get_connection
 import logging
+from dotenv import load_dotenv
 
-# Load .env variables
+from scripts.file_discovery import find_valid_files
+from scripts.universal_ingest import ingest
+
+# Load environment variables
 load_dotenv()
 
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-HTML_FILE = "/app/dataset/enterprise_department/merchant_data.html"
+# Folder containing merchant data files
+DATA_DIR = "/app/dataset/enterprise_department"
 
-def ingest_merchant_data(
-    file_path=HTML_FILE,
-    table_name="staging.stg_merchant_data",
-    batch_size=5000
-):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+# Target table and required columns
+TABLE_NAME = "staging.stg_merchant_data"
+REQUIRED_COLS = [
+    'merchant_id', 'creation_date', 'name', 'street',
+    'state', 'city', 'country', 'contact_number'
+]
+BATCH_SIZE = 5000
 
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+def ingest_merchant_data():
+    """Scan folder and return files containing all required columns."""
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for table {TABLE_NAME}")
         return
 
-    try:
-        # Read the table from HTML
-        df = pd.read_html(file_path)[0]
-
-        # Drop index column if present
-        if (
-            df.columns[0] == 0 or
-            df.columns[0] == '' or
-            str(df.columns[0]).startswith("Unnamed")
-        ):
-            df = df.iloc[:, 1:]
-
-        # Normalize column names (strip & replace spaces)
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-        required_cols = [
-            'merchant_id', 'creation_date', 'name', 'street',
-            'state', 'city', 'country', 'contact_number'
-        ]
-
-        # Validate columns
-        for col in required_cols:
-            if col not in df.columns:
-                raise KeyError(f"Required column '{col}' not found in HTML")
-
-        # Transformations
-        df['creation_date'] = pd.to_datetime(df['creation_date'])
-
-        # Convert text columns to string
-        text_cols = [
-            'merchant_id', 'name', 'street', 'state',
-            'city', 'country', 'contact_number'
-        ]
-        for col in text_cols:
-            df[col] = df[col].astype(str)
-
-        # Metadata
-        df['source_filename'] = os.path.basename(file_path)
-        df['ingestion_date'] = datetime.now()
-
-        # Order of columns for DB
-        insert_cols = required_cols + ['source_filename', 'ingestion_date']
-
-        # Convert dataframe rows to tuples
-        data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-        # Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-
-        # Batch insert
-        for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i:i + batch_size]
-
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch
-            )
-            conn.commit()
-
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
-
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    # Call the universal ingestion engine
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE,
+    )
 
 if __name__ == "__main__":
     ingest_merchant_data()

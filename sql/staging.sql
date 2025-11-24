@@ -107,7 +107,7 @@ CREATE TABLE staging.stg_user_credit_card(
 DROP TABLE IF EXISTS staging.stg_merchant_data;
 CREATE TABLE staging.stg_merchant_data(
 	merchant_id TEXT,
-	creation_date DATE,
+	creation_date TIMESTAMP,
 	name TEXT,
 	street TEXT,
 	state TEXT,
