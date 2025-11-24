@@ -1,10 +1,8 @@
-import os
-import pandas as pd
-from datetime import datetime
-from psycopg2.extras import execute_values
-from dotenv import load_dotenv
-from scripts.database_connection import get_connection
 import logging
+from dotenv import load_dotenv
+
+from scripts.file_discovery import find_valid_files
+from scripts.universal_ingest import ingest
 
 # Load environment variables
 load_dotenv()
@@ -14,81 +12,29 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-CSV_FILE = "/app/dataset/customer_management_department/user_job.csv"
+# Folder containing the source files
+DATA_DIR = "/app/dataset/customer_management_department"
 
-def ingest_user_job(
-    file_path=CSV_FILE,
-    table_name="staging.stg_user_job",
-    batch_size=5000
-):
-    logging.info(f"Starting ingestion for {file_path} into {table_name}")
+# Target table and required columns
+TABLE_NAME = "staging.stg_user_job"
+REQUIRED_COLS = ["user_id", "name", "job_title", "job_level"]
+BATCH_SIZE = 5000
 
-    # Connect to database
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        logging.info("Database connection successful")
-    except Exception:
-        logging.error("Cannot proceed without database connection")
+def ingest_user_job():
+    """Scan folder and return files containing all required columns."""
+    valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
+
+    if not valid_files:
+        logging.error(f"No valid files found in {DATA_DIR} for table {TABLE_NAME}")
         return
 
-    try:
-        # Load CSV
-        df = pd.read_csv(file_path)
-
-        # Normalize column names
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-        # Required columns
-        required_cols = ["user_id", "name", "job_title", "job_level"]
-
-        for col in required_cols:
-            if col not in df.columns:
-                raise KeyError(f"Required column '{col}' missing from CSV")
-
-        # Convert everything to string (except metadata)
-        text_cols = ["user_id", "name", "job_title", "job_level"]
-        for col in text_cols:
-            df[col] = df[col].astype(str)
-
-        # Metadata
-        df["source_filename"] = os.path.basename(file_path)
-        df["ingestion_date"] = datetime.now()
-
-        # Order of columns for DB
-        insert_cols = required_cols + ["source_filename", "ingestion_date"]
-
-        # Convert rows to tuples
-        data_tuples = [tuple(row) for row in df[insert_cols].to_numpy()]
-
-        # Truncate table
-        logging.info(f"Truncating table {table_name}")
-        cur.execute(f"TRUNCATE TABLE {table_name}")
-        conn.commit()
-
-        # Batch insert
-        for i in range(0, len(data_tuples), batch_size):
-            batch = data_tuples[i : i + batch_size]
-
-            execute_values(
-                cur,
-                f"INSERT INTO {table_name} ({', '.join(insert_cols)}) VALUES %s",
-                batch
-            )
-            conn.commit()
-
-            logging.info(f"Inserted rows {i+1} to {i+len(batch)}")
-
-        logging.info(f"Ingestion complete: {len(data_tuples)} rows inserted")
-
-    except Exception as e:
-        logging.error(f"Error during ingestion: {e}")
-
-    finally:
-        cur.close()
-        conn.close()
-        logging.info("Database connection closed")
-
+    # Call the universal ingestion engine
+    ingest(
+        file_paths=valid_files,
+        table_name=TABLE_NAME,
+        required_cols=REQUIRED_COLS,
+        batch_size=BATCH_SIZE,
+    )
 
 if __name__ == "__main__":
     ingest_user_job()
