@@ -36,6 +36,5 @@ def ingest_order_merchant():
         batch_size=BATCH_SIZE
     )
 
-
 if __name__ == "__main__":
     ingest_order_merchant()
