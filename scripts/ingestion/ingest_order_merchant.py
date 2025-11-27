@@ -1,5 +1,6 @@
 import logging
 from dotenv import load_dotenv
+
 from scripts.file_discovery import find_valid_files
 from scripts.universal_ingest import ingest
 
