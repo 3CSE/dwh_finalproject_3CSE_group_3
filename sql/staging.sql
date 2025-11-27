@@ -164,7 +164,7 @@ CREATE TABLE staging.stg_campaign_transactions(
 	campaign_id TEXT,
 	order_id TEXT,
 	estimated_arrival TEXT,
-	availed TEXT,
+	availed INT,
 	-- additional metadata for data lineage/tracking
 	source_filename TEXT,
 	ingestion_date TIMESTAMP
