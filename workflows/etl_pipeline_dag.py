@@ -1,0 +1,55 @@
+from airflow.operators.python import PythonOperator
+from airflow.models.dag import DAG
+from airflow.utils.helpers import chain
+from datetime import datetime
+import subprocess
+import os
+
+def run_script_safe(script_path):
+    if os.path.exists(script_path):
+        try:
+            subprocess.run(["python", script_path], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error running {script_path}: {e}")
+    else:
+        print(f"Script not found: {script_path}")
+
+def create_task_safe(script_path):
+    task_id = os.path.splitext(os.path.basename(script_path))[0]
+    return PythonOperator(
+        task_id=task_id,
+        python_callable=lambda s=script_path: run_script_safe(s)
+    )
+
+with DAG(
+    dag_id="etl_pipeline_safe",
+    start_date=datetime(2025, 11, 27),
+    schedule_interval="@daily",
+    catchup=False,
+    tags=["ETL", "safe"]
+) as dag:
+
+    # Stage 1
+    db_conn = create_task_safe("scripts/database_connection.py")
+    file_load = create_task_safe("scripts/file_loader.py")
+
+    # Stage 2
+    file_discover = create_task_safe("scripts/file_discovery.py")
+    universal_ingest = create_task_safe("scripts/universal_ingest.py")
+
+    # Stage 3: ingestion scripts
+    ingestion_folder = "scripts/ingestion"
+    ingestion_tasks = []
+    if os.path.exists(ingestion_folder):
+        for f in sorted(os.listdir(ingestion_folder)):
+            if f.endswith(".py") and f.startswith("ingest_"):
+                script_path = os.path.join(ingestion_folder, f)
+                ingestion_tasks.append(create_task_safe(script_path))
+
+    # ✅ Proper chaining
+    # Stage 1 → Stage 2
+    chain(db_conn, file_load, file_discover, universal_ingest)
+
+    # Stage 2 → Stage 3 (if ingestion scripts exist)
+    if ingestion_tasks:
+        chain(file_discover, universal_ingest, *ingestion_tasks)
