@@ -10,17 +10,11 @@ CREATE TABLE warehouse.DimProduct (
     price NUMERIC(18,2)
 );
 
--- Composite unique index on DimProduct to prevent exact duplicates
--- Allows same product_id with different prices/attributes (preserves all variations)
--- Required for UPSERT operations (ON CONFLICT clause)
-CREATE UNIQUE INDEX uk_dimproduct_composite 
-ON warehouse.DimProduct (product_id, product_name, product_type, price);
-
 -- DimMerchant
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT,
+    merchant_id TEXT UNIQUE,
     name TEXT,
     contact_number TEXT,
     street TEXT,
@@ -34,7 +28,7 @@ CREATE TABLE warehouse.DimMerchant (
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT,
+    staff_id TEXT UNIQUE,
     name TEXT,
     job_level TEXT,
     street TEXT,
@@ -141,4 +135,3 @@ CREATE TABLE warehouse.FactOrderLineItem (
 ALTER TABLE warehouse.FactOrderLineItem 
 ADD CONSTRAINT fk_lineitem_order
     FOREIGN KEY (order_id) REFERENCES warehouse.FactOrder(order_id);
-

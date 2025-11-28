@@ -10,7 +10,7 @@ user_data AS (
         TRIM(gender) AS gender,
         birthdate,
         creation_date,
-        TRIM(street) AS street,
+        INITCAP(TRIM(street)) AS street,
         TRIM(city) AS city,
         TRIM(state) AS state,
         TRIM(country) AS country,
