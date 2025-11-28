@@ -15,4 +15,3 @@ COPY dataset/ ./dataset/
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "/app/scripts/product_list_ingestion.py"]

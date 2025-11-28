@@ -16,12 +16,15 @@ cleaned AS (
         COALESCE(TRIM(product_name), 'Unknown') AS product_name,
         COALESCE(INITCAP(TRIM(product_type)), 'Unknown') AS product_type,
         CAST(price AS NUMERIC(18,2)) AS price,
+        ingestion_date   -- <--- add this line
     FROM source_data
     WHERE product_id IS NOT NULL
-      AND TRIM(product_id) != ''  -- Ensure product_id is not empty after trimming
+      AND TRIM(product_id) != ''
       AND price IS NOT NULL
-      AND price >= 0  -- No negative prices
+      AND price >= 0
 ),
+
+
 
 -- Deduplicate EXACT duplicate rows only
 -- IMPORTANT: This preserves products with same product_id but different prices/names/types
