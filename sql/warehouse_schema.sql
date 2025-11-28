@@ -28,7 +28,7 @@ CREATE TABLE warehouse.DimMerchant (
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT,
+    staff_id TEXT UNIQUE,
     name TEXT,
     job_level TEXT,
     street TEXT,
