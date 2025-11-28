@@ -14,7 +14,7 @@ CREATE TABLE warehouse.DimProduct (
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT,
+    merchant_id TEXT UNIQUE,
     name TEXT,
     contact_number TEXT,
     street TEXT,
@@ -43,7 +43,7 @@ CREATE TABLE warehouse.DimStaff (
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT,
+    user_id TEXT UNIQUE,
     name TEXT,
     gender TEXT,
     birthdate TIMESTAMP,
