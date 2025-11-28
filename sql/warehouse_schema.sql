@@ -10,6 +10,12 @@ CREATE TABLE warehouse.DimProduct (
     price NUMERIC(18,2)
 );
 
+-- Composite unique index on DimProduct to prevent exact duplicates
+-- Allows same product_id with different prices/attributes (preserves all variations)
+-- Required for UPSERT operations (ON CONFLICT clause)
+CREATE UNIQUE INDEX uk_dimproduct_composite 
+ON warehouse.DimProduct (product_id, product_name, product_type, price);
+
 -- DimMerchant
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
