@@ -7,7 +7,9 @@ CREATE TABLE warehouse.DimProduct (
     product_id TEXT,
     product_name TEXT,
     product_type TEXT,
-    price NUMERIC(18,2)
+    price NUMERIC(18,2),
+    -- unique index on combination of all fields to prevent exact duplicates
+    UNIQUE (product_id, product_name, product_type, price)
 );
 
 -- DimMerchant
@@ -67,7 +69,9 @@ CREATE TABLE warehouse.DimCampaign (
     campaign_id TEXT,
     campaign_name TEXT,
     campaign_description TEXT,
-    discount_value NUMERIC(18,2)
+    discount_value NUMERIC(18,2),
+    -- unique index on combination of all fields to prevent exact duplicates
+    UNIQUE (campaign_id, campaign_name, campaign_description, discount_value)
 );
 
 -- DimDate
@@ -135,4 +139,3 @@ CREATE TABLE warehouse.FactOrderLineItem (
 ALTER TABLE warehouse.FactOrderLineItem 
 ADD CONSTRAINT fk_lineitem_order
     FOREIGN KEY (order_id) REFERENCES warehouse.FactOrder(order_id);
-
