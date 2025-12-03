@@ -4,12 +4,10 @@ CREATE SCHEMA IF NOT EXISTS warehouse;
 DROP TABLE IF EXISTS warehouse.DimProduct;
 CREATE TABLE warehouse.DimProduct (
     product_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    product_id TEXT,
+    product_id TEXT UNIQUE,
     product_name TEXT,
     product_type TEXT,
-    price NUMERIC(18,2),
-    -- unique index on combination of all fields to prevent exact duplicates
-    UNIQUE (product_id, product_name, product_type, price)
+    price NUMERIC(18,2)
 );
 
 -- DimMerchant
@@ -66,12 +64,10 @@ CREATE TABLE warehouse.DimCustomer (
 DROP TABLE IF EXISTS warehouse.DimCampaign;
 CREATE TABLE warehouse.DimCampaign (
     campaign_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    campaign_id TEXT,
+    campaign_id TEXT UNIQUE,
     campaign_name TEXT,
     campaign_description TEXT,
     discount_value NUMERIC(18,2),
-    -- unique index on combination of all fields to prevent exact duplicates
-    UNIQUE (campaign_id, campaign_name, campaign_description, discount_value)
 );
 
 -- DimDate
