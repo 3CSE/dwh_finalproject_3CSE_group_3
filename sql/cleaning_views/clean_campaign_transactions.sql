@@ -12,13 +12,13 @@ SELECT
     transaction_date,
 
     -- 3. Derived Columns:
-    CAST(NULLIF(REGEXP_REPLACE(estimated_arrival, '[^0-9]', '', 'g'), '') AS INT) AS estimated_arrival_days,
+    CAST(NULLIF(REGEXP_REPLACE(estimated_arrival, '[^0-9]', '', 'g'), '') AS INT) AS estimated_arrival,
 
     -- Convert availed to boolean
     CASE 
         WHEN availed = 1 THEN TRUE 
         ELSE FALSE 
-    END AS availed_flag,
+    END AS availed,
 
     -- 4. Metadata
     source_filename,

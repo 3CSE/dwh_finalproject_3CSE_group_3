@@ -43,7 +43,7 @@ SELECT
         AS NUMERIC(18, 2)), 
         -- b. Handles null
         0.00
-    ) AS discount_value
+    ) AS discount
 
 FROM 
     staging.stg_campaign;

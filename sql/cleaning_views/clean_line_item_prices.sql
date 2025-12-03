@@ -8,7 +8,7 @@ SELECT
     TRIM(order_id) AS order_id,
 
     -- 2. Metric: Unit Price
-    CAST(COALESCE(price, 0.00) AS NUMERIC(18, 2)) AS unit_price,
+    CAST(COALESCE(price, 0.00) AS NUMERIC(18, 2)) AS price,
 
     -- 3. Critical Transformation: Quantity
     -- Strip ('PC', 'pcs', 'px', 'pieces') and cast to INT.
