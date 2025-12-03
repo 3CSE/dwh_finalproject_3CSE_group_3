@@ -65,7 +65,6 @@ combined AS (
 deduped AS (
     SELECT *
     FROM combined
-    -- You could add ROW_NUMBER() if you have ingestion_date and want latest record
 )
 
 -- Step 6: UPSERT into DimCustomer
