@@ -11,8 +11,8 @@ SELECT
     -- 2. Date Columns: 
     transaction_date,
 
-    -- 3. Derived Columns:
-    CAST(NULLIF(REGEXP_REPLACE(estimated_arrival, '[^0-9]', '', 'g'), '') AS INT) AS estimated_arrival,
+    -- 3. Derived Columns: renamed estimated_arrival to estimated_arrival_days for clarity
+    CAST(NULLIF(REGEXP_REPLACE(estimated_arrival, '[^0-9]', '', 'g'), '') AS INT) AS estimated_arrival_days,
 
     -- Convert availed to boolean
     CASE 
