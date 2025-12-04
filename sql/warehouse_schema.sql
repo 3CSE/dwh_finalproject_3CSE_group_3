@@ -4,7 +4,7 @@ CREATE SCHEMA IF NOT EXISTS warehouse;
 DROP TABLE IF EXISTS warehouse.DimProduct;
 CREATE TABLE warehouse.DimProduct (
     product_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    product_id TEXT UNIQUE,
+    product_id TEXT,
     product_name TEXT,
     product_type TEXT,
     price NUMERIC(18,2)
@@ -14,7 +14,7 @@ CREATE TABLE warehouse.DimProduct (
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT UNIQUE,
+    merchant_id TEXT,
     name TEXT,
     contact_number TEXT,
     street TEXT,
@@ -28,7 +28,7 @@ CREATE TABLE warehouse.DimMerchant (
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT UNIQUE,
+    staff_id TEXT,
     name TEXT,
     job_level TEXT,
     street TEXT,
@@ -43,7 +43,7 @@ CREATE TABLE warehouse.DimStaff (
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT UNIQUE,
+    user_id TEXT,
     name TEXT,
     gender TEXT,
     birthdate TIMESTAMP,
@@ -64,7 +64,7 @@ CREATE TABLE warehouse.DimCustomer (
 DROP TABLE IF EXISTS warehouse.DimCampaign;
 CREATE TABLE warehouse.DimCampaign (
     campaign_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    campaign_id TEXT UNIQUE,
+    campaign_id TEXT,
     campaign_name TEXT,
     campaign_description TEXT,
     discount_value NUMERIC(18,2),
@@ -130,8 +130,3 @@ CREATE TABLE warehouse.FactOrderLineItem (
     , CONSTRAINT fk_lineitem_product
         FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key)
 );
-
--- Foreign key constraint for FactOrderLineItem to FactOrder
-ALTER TABLE warehouse.FactOrderLineItem 
-ADD CONSTRAINT fk_lineitem_order
-    FOREIGN KEY (order_id) REFERENCES warehouse.FactOrder(order_id);
