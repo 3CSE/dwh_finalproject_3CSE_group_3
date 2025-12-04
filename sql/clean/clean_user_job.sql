@@ -34,13 +34,10 @@ cleaned AS (
     FROM source_data
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
 ),
-ranked AS (
+dup_flag AS (
     SELECT
         *,
-        ROW_NUMBER() OVER (
-            PARTITION BY user_id, name, job_title, job_level, source_filename
-            ORDER BY ingestion_date DESC
-        ) AS rn
+        COUNT(*) OVER (PARTITION BY user_id) AS dup_count
     FROM cleaned
 )
 SELECT
@@ -49,10 +46,17 @@ SELECT
     job_title,
     job_level,
     source_filename,
-    ingestion_date
-FROM ranked
-WHERE rn = 1;
+    ingestion_date,
+
+    CASE 
+        WHEN dup_count > 1 THEN TRUE
+        ELSE FALSE
+    END AS is_duplicate
+ 
+FROM dup_flag;
+
 
 -- Test the view
 -- SELECT * FROM staging.stg_user_job LIMIT 50;
--- SELECT * FROM staging.clean_stg_user_job LIMIT 50;
+SELECT * FROM staging.clean_stg_user_job 
+WHERE user_id = 'USER00304'
