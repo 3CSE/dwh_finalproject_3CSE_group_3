@@ -3,42 +3,71 @@
 -- Target Usage: Populates warehouse.DimProduct and FactOrderLineItem
 
 CREATE OR REPLACE VIEW staging.view_clean_product_list AS
-SELECT
-    -- 1. Identity Columns: Clean and standardize ID for joining
-    TRIM(UPPER(product_id)) AS product_id,
+WITH source_data AS (
+    SELECT
+        product_id,
+        product_name,
+        product_type,
+        price,
+        source_filename,
+        ingestion_date
+    FROM staging.stg_product_list
+),
+cleaned AS (
+    SELECT
+        TRIM(UPPER(product_id)) AS product_id,
 
-    -- 2. Descriptive Fields: Title Case 
-    REPLACE(
         REPLACE(
             REPLACE(
                 REPLACE(
                     REPLACE(
-                        INITCAP(TRIM(product_name)), 
-                        '''T',  -- Fixes 'T 
-                        '''t'
+                        REPLACE(
+                            INITCAP(TRIM(product_name)), 
+                            '''T', '''t'
+                        ),
+                        '''S', '''s'
                     ),
-                    '''S',  -- Fixes 'S 
-                    '''s'
+                    '''D', '''d'
                 ),
-                '''D',  -- Fixes 'D
-                '''d'
+                '''M', '''m'
             ),
-            '''M',  -- Fixes 'M
-            '''m'
-        ),
-        '''Ll', -- Fixes 'LL
-        '''ll'
-    ) AS product_name,
+            '''Ll', '''ll'
+        ) AS product_name,
 
-    -- 3. Category Field: Convert snake_case or messy casing to Title Case for readability
-    INITCAP(REPLACE(TRIM(product_type), '_', ' ')) AS product_type,
+        INITCAP(REPLACE(TRIM(product_type), '_', ' ')) AS product_type,
 
-    -- 4. Metric Field: Ensure price is non-null
-    COALESCE(price, 0.00) AS price,
-    
-    -- 5. Metadata: Pass through for data lineage
+        COALESCE(price, 0.00) AS price,
+        
+        source_filename,
+        ingestion_date
+    FROM source_data
+    WHERE product_id IS NOT NULL AND TRIM(product_id) != '' 
+),
+ranked AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY 
+                product_id, product_name, product_type, price, source_filename, ingestion_date
+            ORDER BY 
+                ingestion_date
+        ) AS row_num,
+        
+        COUNT(*) OVER (PARTITION BY product_id) AS conflict_dup_count
+    FROM cleaned
+)
+SELECT
+    product_id,
+    product_name,
+    product_type,
+    price,
     source_filename,
-    ingestion_date
+    ingestion_date,
 
-FROM 
-    staging.stg_product_list;
+    CASE 
+        WHEN conflict_dup_count > 1 THEN TRUE
+        ELSE FALSE
+    END AS is_duplicate
+ 
+FROM ranked
+WHERE row_num = 1;

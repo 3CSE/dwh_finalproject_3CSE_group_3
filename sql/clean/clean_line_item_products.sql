@@ -3,37 +3,71 @@
 -- Target Usage: Provides IDs for FactOrderLineItem creation
 
 CREATE OR REPLACE VIEW staging.view_clean_line_items_products AS
-SELECT
-    -- 1. Identity Columns
-    TRIM(order_id) AS order_id,
-    TRIM(UPPER(product_id)) AS product_id,
+WITH source_data AS (
+    SELECT
+        order_id,
+        product_name,
+        product_id,
+        source_filename,
+        ingestion_date
+    FROM staging.stg_line_items_products
+),
+cleaned AS (
+    SELECT
+        TRIM(order_id) AS order_id,
+        TRIM(UPPER(product_id)) AS product_id,
 
-    -- 2. Descriptive Fields: Apply title case
-    REPLACE(
         REPLACE(
             REPLACE(
                 REPLACE(
                     REPLACE(
-                        INITCAP(TRIM(product_name)), 
-                        '''T',  -- Fixes 'T
-                        '''t'
+                        REPLACE(
+                            INITCAP(TRIM(product_name)), 
+                            '''T', '''t'
+                        ),
+                        '''S', '''s'
                     ),
-                    '''S',  -- Fixes 'S
-                    '''s'
+                    '''D', '''d'
                 ),
-                '''D',  -- Fixes 'D
-                '''d'
+                '''M', '''m'
             ),
-            '''M',  -- Fixes 'M
-            '''m'
-        ),
-        '''Ll', -- Fixes 'LL
-        '''ll'
-    ) AS product_name,
+            '''Ll', '''ll'
+        ) AS product_name,
 
-    -- 3. Metadata
+        source_filename,
+        ingestion_date
+    FROM source_data
+    WHERE order_id IS NOT NULL AND TRIM(order_id) != '' 
+    AND product_id IS NOT NULL AND TRIM(product_id) != '' 
+),
+ranked AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY 
+                order_id, 
+                product_id, 
+                product_name, 
+                source_filename, 
+                ingestion_date 
+            ORDER BY 
+                ingestion_date 
+        ) AS row_num,
+        
+        COUNT(*) OVER (PARTITION BY order_id, product_id) AS conflict_dup_count
+    FROM cleaned
+)
+SELECT
+    order_id,
+    product_name,
+    product_id,
     source_filename,
-    ingestion_date
+    ingestion_date,
 
-FROM 
-    staging.stg_line_items_products;
+    CASE 
+        WHEN conflict_dup_count > 1 THEN TRUE
+        ELSE FALSE
+    END AS is_duplicate
+ 
+FROM ranked
+WHERE row_num = 1;

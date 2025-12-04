@@ -3,47 +3,79 @@
 -- Target Usage: Populates warehouse.DimCampaign
 
 CREATE OR REPLACE VIEW staging.view_clean_campaign AS
-SELECT
-    -- 1. Identity Columns: Standardize IDs for clean joining
-    TRIM(UPPER(campaign_id)) AS campaign_id,
+WITH source_data AS (
+    SELECT
+        campaign_id,
+        campaign_name,
+        campaign_description,
+        discount,
+        source_filename,
+        ingestion_date
+    FROM staging.stg_campaign
+),
+cleaned AS (
+    SELECT
+        TRIM(UPPER(campaign_id)) AS campaign_id,
 
-    -- 2. Descriptive Fields: Clean up and format for readability
-    REPLACE(
         REPLACE(
             REPLACE(
                 REPLACE(
                     REPLACE(
-                        INITCAP(TRIM(campaign_name)), 
-                        '''T',  -- Fixes 'T 
-                        '''t'
+                        REPLACE(
+                            INITCAP(TRIM(campaign_name)), 
+                            '''T', '''t'
+                        ),
+                        '''S', '''s'
                     ),
-                    '''S',  -- Fixes 'S 
-                    '''s'
+                    '''D', '''d'
                 ),
-                '''D',  -- Fixes 'D 
-                '''d'
+                '''M', '''m'
             ),
-            '''M',  -- Fixes 'M
-            '''m'
-        ),
-        '''Ll', -- Fixes 'LL
-        '''ll'
-    ) AS campaign_name,
-    
-    TRIM(campaign_description) AS campaign_description,
+            '''Ll', '''ll'
+        ) AS campaign_name,
+        
+        TRIM(campaign_description) AS campaign_description,
 
-    -- 3. Convert  TEXT 'discount' to clean NUMERIC
-    COALESCE(
-        -- a. Strip non-numeric/non-decimal characters (removes %, pct, %% etc.)
-        CAST(
-            NULLIF(
-                REGEXP_REPLACE(discount, '[^0-9\.]', '', 'g') 
-                , ''
-            ) 
-        AS NUMERIC(18, 2)), 
-        -- b. Handles null
-        0.00
-    ) AS discount
+        COALESCE(
+            CAST(
+                NULLIF(
+                    REGEXP_REPLACE(discount, '[^0-9\.]', '', 'g')
+                    , ''
+                ) 
+            AS NUMERIC(18, 2)), 
+            0.00
+        ) AS discount_value,
 
-FROM 
-    staging.stg_campaign;
+        source_filename,
+        ingestion_date
+    FROM source_data
+    WHERE campaign_id IS NOT NULL AND TRIM(campaign_id) != '' 
+),
+ranked AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY 
+                campaign_id, campaign_name, campaign_description, discount_value, source_filename, ingestion_date
+            ORDER BY 
+                ingestion_date
+        ) AS row_num,
+        
+        COUNT(*) OVER (PARTITION BY campaign_id) AS conflict_dup_count
+    FROM cleaned
+)
+SELECT
+    campaign_id,
+    campaign_name,
+    campaign_description,
+    discount_value,
+    source_filename,
+    ingestion_date,
+
+    CASE 
+        WHEN conflict_dup_count > 1 THEN TRUE
+        ELSE FALSE
+    END AS is_duplicate
+ 
+FROM ranked
+WHERE row_num = 1;
