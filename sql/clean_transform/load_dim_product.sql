@@ -1,60 +1,15 @@
-WITH 
--- Get raw product data from staging layer
-source_data AS (
-    SELECT
-        product_id,
-        product_name,
-        product_type,
-        price,
-        ingestion_date
-    FROM staging.stg_product_list
-),
--- Clean and standardize data (e.g., trim spaces, handle NULLs, standardize formats)
-cleaned AS (
-    SELECT
-        TRIM(product_id) AS product_id,
-        COALESCE(TRIM(product_name), 'Unknown') AS product_name,
-        COALESCE(INITCAP(TRIM(product_type)), 'Unknown') AS product_type,
-        CAST(price AS NUMERIC(18,2)) AS price,
-        ingestion_date   -- <--- add this line
-    FROM source_data
-    WHERE product_id IS NOT NULL
-      AND TRIM(product_id) != ''
-      AND price IS NOT NULL
-      AND price >= 0
-),
+-- Load Script: Load DimProduct
+-- Source View: staging.view_clean_product_list
+-- Strategy: Type 0/Type 6 SCD (Preserve all unique product attribute combinations)
 
-
-
--- Deduplicate EXACT duplicate rows only
--- IMPORTANT: This preserves products with same product_id but different prices/names/types
--- Example: If product_id='P001' has price $10 AND price $20, BOTH are kept
--- Only removes rows where ALL columns (product_id, name, type, price) are identical
-ranked AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY product_id, product_name, product_type, price 
-            ORDER BY ingestion_date DESC  -- keep latest per exact duplicate
-        ) AS rn
-    FROM cleaned
-),
-
--- Keep only the first row per exact duplicate
--- All unique combinations are preserved (including same product_id with different prices)
-deduped AS (
+WITH clean_source AS (
     SELECT
         product_id,
         product_name,
         product_type,
         price
-    FROM ranked
-    WHERE rn = 1
+    FROM staging.view_clean_product_list
 )
-
--- UPSERT: Insert new records, skip exact duplicates
--- Uses composite unique index on (product_id, product_name, product_type, price)
--- Safe to run multiple times - won't create duplicates or break foreign keys
 INSERT INTO warehouse.DimProduct (
     product_id, 
     product_name, 
@@ -62,13 +17,17 @@ INSERT INTO warehouse.DimProduct (
     price
 )
 SELECT 
-    product_id, 
-    product_name, 
-    product_type, 
-    price
-FROM deduped
-ON CONFLICT (product_id, product_name, product_type, price)
-DO NOTHING;  -- If exact combination already exists, skip (no update needed)
-
--- Optional: Verify loaded data
--- SELECT COUNT(*) FROM warehouse.DimProduct;
+    cs.product_id, 
+    cs.product_name, 
+    cs.product_type, 
+    cs.price
+FROM clean_source cs
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM warehouse.DimProduct dp
+    WHERE 
+        dp.product_id = cs.product_id AND
+        dp.product_name = cs.product_name AND
+        dp.product_type = cs.product_type AND
+        dp.price = cs.price
+);

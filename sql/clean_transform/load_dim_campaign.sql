@@ -1,58 +1,16 @@
--- Cleans and loads DimCampaign from staging
+-- Load Script: Load DimCampaign
+-- Source View: staging.view_clean_campaign
+-- Strategy: Type 0/Type 6 SCD (Preserve all unique campaign attribute combinations)
 
-WITH 
--- Get raw source data from staging
-source_data AS (
-    SELECT
-        campaign_id,
-        campaign_name,
-        campaign_description,
-        discount,
-        ingestion_date
-    FROM staging.stg_campaign
-),
-
--- Clean and standardize
--- TRIM text fields, parse discount, filter invalid records
-cleaned AS (
-    SELECT
-        TRIM(campaign_id) AS campaign_id,
-        TRIM(campaign_name) AS campaign_name,
-        TRIM(campaign_description) AS campaign_description,
-
-        -- Convert discount to numeric fraction
-        CASE
-            WHEN discount IS NULL THEN NULL
-            ELSE (REGEXP_REPLACE(discount, '[^0-9]', '', 'g')::NUMERIC) / 100.0 
-        END AS discount_value,
-        ingestion_date
-    FROM source_data
-    WHERE campaign_id IS NOT NULL AND TRIM(campaign_id) != ''
-),
-
--- Deduplicate EXACT duplicates only
--- Preserve variations (e.g., same campaign_id but different discount)
-ranked AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY campaign_id, campaign_name, campaign_description, discount_value
-            ORDER BY ingestion_date DESC
-        ) AS rn
-    FROM cleaned
-),
-
-deduped AS (
+WITH clean_source AS (
     SELECT
         campaign_id,
         campaign_name,
         campaign_description,
         discount_value
-    FROM ranked
-    WHERE rn = 1
+    FROM staging.view_clean_campaign
 )
 
--- Step 4: Insert into warehouse (UPSERT)
 INSERT INTO warehouse.DimCampaign (
     campaign_id,
     campaign_name,
@@ -60,14 +18,18 @@ INSERT INTO warehouse.DimCampaign (
     discount_value
 )
 SELECT
-    campaign_id,
-    campaign_name,
-    campaign_description,
-    discount_value
-FROM deduped
-ON CONFLICT (campaign_id, campaign_name, campaign_description, discount_value)
-DO NOTHING;  -- skip exact duplicates
+    cs.campaign_id,
+    cs.campaign_name,
+    cs.campaign_description,
+    cs.discount_value
+FROM clean_source cs
 
--- Optional: Verify loaded data
--- SELECT * FROM warehouse.DimCampaign;
--- SELECT * FROM staging.stg_campaign;
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM warehouse.DimCampaign dc
+    WHERE 
+        dc.campaign_id = cs.campaign_id AND
+        dc.campaign_name = cs.campaign_name AND
+        dc.campaign_description = cs.campaign_description AND
+        dc.discount_value = cs.discount_value
+);
