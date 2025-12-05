@@ -11,7 +11,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Directory containing enterprise department merchant/order files
-DATA_DIR = "/app/dataset/enterprise_department"
+DATA_DIR = "/opt/airflow/dataset/enterprise_department"
 
 # Database table and required columns
 TABLE_NAME = "staging.stg_order_merchant"

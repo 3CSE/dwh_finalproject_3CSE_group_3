@@ -1,7 +1,7 @@
 from airflow.operators.python import PythonOperator
 from airflow.models.dag import DAG
 from airflow.utils.helpers import chain
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 import os
 import logging
@@ -9,11 +9,8 @@ import logging
 def run_script_safe(script_path):
     if os.path.exists(script_path):
         try:
-            # Preserve existing environment and set PYTHONPATH for imports
             env = os.environ.copy()
             env["PYTHONPATH"] = "/opt/airflow:" + env.get("PYTHONPATH", "")
-
-            # Run the script and capture stdout/stderr
             result = subprocess.run(
                 ["python", script_path],
                 check=True,
@@ -22,10 +19,7 @@ def run_script_safe(script_path):
                 stderr=subprocess.STDOUT,
                 text=True
             )
-
-            # Send all output to Airflow logs
             logging.info(result.stdout)
-
         except subprocess.CalledProcessError as e:
             logging.error(f"Error running {script_path}: {e}")
             logging.error(e.stdout if e.stdout else "No output captured")
@@ -36,7 +30,9 @@ def create_task_safe(script_path):
     task_id = os.path.splitext(os.path.basename(script_path))[0]
     return PythonOperator(
         task_id=task_id,
-        python_callable=lambda s=script_path: run_script_safe(s)
+        python_callable=lambda s=script_path: run_script_safe(s),
+        retries=2,
+        retry_delay=timedelta(minutes=2)
     )
 
 with DAG(
@@ -47,7 +43,7 @@ with DAG(
     tags=["ETL", "safe"]
 ) as dag:
 
-    # Stage 1
+    # Stage 1: parallel
     db_conn = create_task_safe("scripts/database_connection.py")
     file_load = create_task_safe("scripts/file_loader.py")
 
@@ -55,7 +51,11 @@ with DAG(
     file_discover = create_task_safe("scripts/file_discovery.py")
     universal_ingest = create_task_safe("scripts/universal_ingest.py")
 
-    # Stage 3: ingestion folder
+    # Stage 1 → Stage 2
+    db_conn >> file_discover
+    file_load >> file_discover
+
+    # Stage 3: ingestion scripts
     ingestion_folder = "scripts/ingestion"
     ingestion_tasks = []
     if os.path.exists(ingestion_folder):
@@ -64,9 +64,7 @@ with DAG(
                 script_path = os.path.join(ingestion_folder, f)
                 ingestion_tasks.append(create_task_safe(script_path))
 
-    # Stage 1 → Stage 2
-    chain(db_conn, file_load, file_discover, universal_ingest)
-
-    # Stage 2 → Stage 3 (if ingestion scripts exist)
+    # Stage 2 → Stage 3
     if ingestion_tasks:
-        chain(file_discover, universal_ingest, *ingestion_tasks)
+        for task in ingestion_tasks:
+            universal_ingest >> task

@@ -11,7 +11,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Folder containing all customer management files
-DATA_DIR = "/app/dataset/customer_management_department"
+DATA_DIR = "/opt/airflow/dataset/customer_management_department"
 
 # Table and required columns
 TABLE_NAME = "staging.stg_user_data"
