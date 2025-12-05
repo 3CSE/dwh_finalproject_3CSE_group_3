@@ -10,6 +10,7 @@ WITH source_data AS (
         ingestion_date
     FROM staging.stg_user_credit_card
 ),
+
 cleaned AS (
     SELECT
         TRIM(user_id) AS user_id,
@@ -22,14 +23,26 @@ cleaned AS (
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
       AND credit_card_number IS NOT NULL AND TRIM(credit_card_number) != ''
 ),
-ranked AS (
+-- Remove exact duplicates
+dedup_exact AS (
+    SELECT *
+    FROM (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY user_id, name, credit_card_number, issuing_bank, source_filename
+                ORDER BY ingestion_date
+            ) AS exact_dup_rank
+        FROM cleaned
+    ) t
+    WHERE exact_dup_rank = 1
+),
+-- Flag duplicates based on natural key
+dup_flag AS (
     SELECT
         *,
-        ROW_NUMBER() OVER (
-            PARTITION BY user_id, name, credit_card_number, issuing_bank, source_filename
-            ORDER BY ingestion_date DESC
-        ) AS rn
-    FROM cleaned
+        COUNT(*) OVER (PARTITION BY user_id) AS dup_count
+    FROM dedup_exact
 )
 SELECT
     user_id,
@@ -37,13 +50,18 @@ SELECT
     credit_card_number,
     issuing_bank,
     source_filename,
-    ingestion_date
-FROM ranked
-WHERE rn = 1;
+    ingestion_date,
+    (dup_count > 1) AS is_duplicate
+FROM dup_flag;
 
--- View to check cleaned data
-SELECT * FROM staging.clean_stg_user_credit_card LIMIT 10;
-SELECT * FROM staging.stg_user_credit_card LIMIT 10;
+-- Test the view
+-- Check count
+-- SELECT COUNT(*) FROM staging.clean_stg_user_credit_card;
+-- SELECT COUNT(*) FROM staging.stg_user_credit_card;
+
+-- Check the cleaned data
+-- SELECT * FROM staging.clean_stg_user_credit_card WHERE is_duplicate=TRUE LIMIT 10;
+-- SELECT * FROM staging.stg_user_credit_card LIMIT 10;
 
 
 
