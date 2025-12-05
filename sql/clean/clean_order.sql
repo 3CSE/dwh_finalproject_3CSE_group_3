@@ -27,15 +27,26 @@ cleaned AS (
       AND user_id IS NOT NULL AND TRIM(user_id) != ''
       AND transaction_date IS NOT NULL
 ),
--- Deduplicate exact duplicates
-ranked AS (
+
+dedup_exact AS (
+    SELECT *
+    FROM (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY order_id, user_id, estimated_arrival, transaction_date, source_filename
+                ORDER BY ingestion_date DESC
+            ) AS exact_dup_rank
+        FROM cleaned
+    ) t
+    WHERE exact_dup_rank = 1
+),
+
+dup_flag AS (
     SELECT
         *,
-        ROW_NUMBER() OVER (
-            PARTITION BY order_id, user_id, estimated_arrival, transaction_date, source_filename
-            ORDER BY ingestion_date DESC
-        ) AS rn
-    FROM cleaned
+        COUNT(*) OVER (PARTITION BY order_id) AS dup_count
+    FROM dedup_exact
 )
 SELECT
     order_id,
@@ -43,11 +54,16 @@ SELECT
     estimated_arrival,
     transaction_date,
     source_filename,
-    ingestion_date
-FROM ranked
-WHERE rn = 1;
+    ingestion_date,
+    (dup_count > 1) AS is_duplicate
+FROM dup_flag;
 
 
 -- Test the view
+-- Check count
+-- SELECT COUNT(*) FROM staging.stg_orders;
+-- SELECT COUNT(*) FROM staging.clean_stg_orders;
+
+-- Check the cleaned data
 -- SELECT * FROM staging.stg_orders LIMIT 10;
 -- SELECT * FROM staging.clean_stg_orders LIMIT 10;
