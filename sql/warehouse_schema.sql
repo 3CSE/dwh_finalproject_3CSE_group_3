@@ -7,16 +7,14 @@ CREATE TABLE warehouse.DimProduct (
     product_id TEXT,
     product_name TEXT,
     product_type TEXT,
-    price NUMERIC(18,2),
-    -- unique index on combination of all fields to prevent exact duplicates
-    UNIQUE (product_id, product_name, product_type, price)
+    price NUMERIC(18,2)
 );
 
 -- DimMerchant
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT UNIQUE,
+    merchant_id TEXT,
     name TEXT,
     contact_number TEXT,
     street TEXT,
@@ -30,7 +28,7 @@ CREATE TABLE warehouse.DimMerchant (
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT UNIQUE,
+    staff_id TEXT,
     name TEXT,
     job_level TEXT,
     street TEXT,
@@ -45,7 +43,7 @@ CREATE TABLE warehouse.DimStaff (
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT UNIQUE,
+    user_id TEXT,
     name TEXT,
     gender TEXT,
     birthdate TIMESTAMP,
@@ -70,8 +68,6 @@ CREATE TABLE warehouse.DimCampaign (
     campaign_name TEXT,
     campaign_description TEXT,
     discount_value NUMERIC(18,2),
-    -- unique index on combination of all fields to prevent exact duplicates
-    UNIQUE (campaign_id, campaign_name, campaign_description, discount_value)
 );
 
 -- DimDate
@@ -134,8 +130,3 @@ CREATE TABLE warehouse.FactOrderLineItem (
     , CONSTRAINT fk_lineitem_product
         FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key)
 );
-
--- Foreign key constraint for FactOrderLineItem to FactOrder
-ALTER TABLE warehouse.FactOrderLineItem 
-ADD CONSTRAINT fk_lineitem_order
-    FOREIGN KEY (order_id) REFERENCES warehouse.FactOrder(order_id);

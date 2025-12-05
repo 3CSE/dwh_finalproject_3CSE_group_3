@@ -50,3 +50,4 @@ DO NOTHING;  -- Skip if merchant_id already exists
 
 -- Optional: Check how many rows loaded
 -- SELECT COUNT(*) FROM warehouse.DimMerchant;
+
