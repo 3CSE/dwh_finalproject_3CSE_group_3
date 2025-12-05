@@ -1,31 +1,41 @@
--- load_dim_staff.sql
--- Cleans and loads DimStaff from staging
+-- Load Script: Load DimStaff
+-- Source View: staging.view_clean_staff
+-- Strategy: Type 1 Slowly Changing Dimension (Overwrite existing attributes)
 
-WITH 
--- Step 1: Get base staff info from staging.stg_staff
-staff_data AS (
+
+WITH raw_data AS (
     SELECT
         staff_id,
-        TRIM(name) AS name,
-        TRIM(job_level) AS job_level,
-        INITCAP(TRIM(street)) AS street,
-        TRIM(city) AS city,
-        TRIM(state) AS state,
-        TRIM(country) AS country,
-        TRIM(contact_number) AS contact_number,
-        creation_date
-    FROM staging.stg_staff
-    WHERE staff_id IS NOT NULL AND TRIM(staff_id) != ''
+        name,
+        job_level,
+        street,
+        city,
+        state,
+        country,
+        contact_number,
+        creation_date,
+        -- Retain ingestion_date here for ranking purposes
+        ingestion_date 
+    FROM staging.view_clean_staff
 ),
-
--- Step 2: Deduplicate by business key (staff_id)
-deduped AS (
-    SELECT *
-    FROM staff_data
-    -- Optional: use ROW_NUMBER() over ingestion_date if multiple rows per staff_id
+ranked_source AS (
+    SELECT
+        staff_id,
+        name,
+        job_level,
+        street,
+        city,
+        state,
+        country,
+        contact_number,
+        creation_date,
+        ingestion_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY staff_id
+            ORDER BY ingestion_date DESC 
+        ) AS row_num
+    FROM raw_data
 )
-
--- Step 3: UPSERT into DimStaff
 INSERT INTO warehouse.DimStaff (
     staff_id,
     name,
@@ -47,9 +57,20 @@ SELECT
     country,
     contact_number,
     creation_date
-FROM deduped
-ON CONFLICT (staff_id)
-DO NOTHING;  -- Skip if staff_id already exists
+FROM ranked_source
 
--- Optional: Check how many rows loaded
--- SELECT COUNT(*) FROM warehouse.DimStaff;
+WHERE row_num = 1 
+
+ON CONFLICT (staff_id)
+DO UPDATE SET
+
+    name = EXCLUDED.name,
+    job_level = EXCLUDED.job_level,
+    street = EXCLUDED.street,
+    city = EXCLUDED.city,
+    state = EXCLUDED.state,
+    country = EXCLUDED.country,
+    contact_number = EXCLUDED.contact_number
+
+
+;
