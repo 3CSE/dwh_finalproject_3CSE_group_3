@@ -35,15 +35,26 @@ cleaned AS (
     FROM source_data
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
 ),
-ranked AS (
+-- Remove exact duplicates
+dedup_exact AS (
+    SELECT *
+    FROM (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY user_id, creation_date, name, street, state, city, country, birthdate, gender, device_address, user_type, source_filename
+                ORDER BY ingestion_date
+            ) AS exact_dup_rank
+        FROM cleaned
+    ) t
+    WHERE exact_dup_rank = 1
+),
+-- Flag duplicates based on natural key
+dup_flag AS (
     SELECT
         *,
-        ROW_NUMBER() OVER (
-            PARTITION BY user_id, creation_date, name, street, state, city, country,
-                         birthdate, gender, device_address, user_type, source_filename
-            ORDER BY ingestion_date DESC
-        ) AS rn
-    FROM cleaned
+        COUNT(*) OVER (PARTITION BY user_id) AS dup_count
+    FROM dedup_exact
 )
 SELECT
     user_id,
@@ -58,10 +69,15 @@ SELECT
     device_address,
     user_type,
     source_filename,
-    ingestion_date
-FROM ranked
-WHERE rn = 1;
+    ingestion_date,
+    (dup_count > 1) AS is_duplicate
+FROM dup_flag;
 
 -- test view
--- SELECT * FROM staging.clean_stg_user_data LIMIT 20;
+-- check count
+-- SELECT COUNT(*) FROM staging.clean_stg_user_data;
+-- SELECT COUNT(*) FROM staging.stg_user_data;
+
+-- Check cleaned data
+-- SELECT * FROM staging.clean_stg_user_data WHERE is_duplicate=TRUE LIMIT 20;
 -- SELECT * FROM staging.stg_user_data LIMIT 20;
