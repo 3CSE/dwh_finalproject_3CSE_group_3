@@ -11,7 +11,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Folder containing order files
-DATA_DIR = "/app/dataset/operations_department"
+DATA_DIR = "/opt/airflow/dataset/operations_department"
 
 # Table and required columns
 TABLE_NAME = "staging.stg_orders"

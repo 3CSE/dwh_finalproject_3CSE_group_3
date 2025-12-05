@@ -10,7 +10,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Folder containing marketing department transactional files
-DATA_DIR = "/app/dataset/marketing_department"
+DATA_DIR = "/opt/airflow/dataset/marketing_department"
 
 # Table and required columns
 TABLE_NAME = "staging.stg_campaign_transactions"
