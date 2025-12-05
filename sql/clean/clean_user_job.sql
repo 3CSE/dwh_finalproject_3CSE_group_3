@@ -34,7 +34,7 @@ cleaned AS (
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
 ),
 -- Remove exact duplicates
-cleaned_dedup AS (
+dedup_exact AS (
     SELECT *
     FROM (
         SELECT
