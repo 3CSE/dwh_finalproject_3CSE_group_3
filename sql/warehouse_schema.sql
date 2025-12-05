@@ -67,7 +67,7 @@ CREATE TABLE warehouse.DimCampaign (
     campaign_id TEXT,
     campaign_name TEXT,
     campaign_description TEXT,
-    discount_value NUMERIC(18,2)
+    discount_value NUMERIC(18,2),
 );
 
 -- DimDate
@@ -130,9 +130,3 @@ CREATE TABLE warehouse.FactOrderLineItem (
     , CONSTRAINT fk_lineitem_product
         FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key)
 );
-
--- Foreign key constraint for FactOrderLineItem to FactOrder
-ALTER TABLE warehouse.FactOrderLineItem 
-ADD CONSTRAINT fk_lineitem_order
-    FOREIGN KEY (order_id) REFERENCES warehouse.FactOrder(order_id);
-
