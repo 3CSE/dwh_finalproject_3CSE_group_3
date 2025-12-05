@@ -79,5 +79,5 @@ FROM dup_flag;
 -- SELECT COUNT(*) FROM staging.stg_user_data;
 
 -- Check cleaned data
--- SELECT * FROM staging.clean_stg_user_data WHERE is_duplicate=TRUE LIMIT 20;
+-- SELECT * FROM staging.clean_stg_user_data LIMIT 20;
 -- SELECT * FROM staging.stg_user_data LIMIT 20;

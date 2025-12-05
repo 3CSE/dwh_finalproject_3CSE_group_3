@@ -1,44 +1,8 @@
--- load_dim_customer.sql
--- Cleans and loads DimCustomer from staging
+-- Load DimCustomer table
+-- Source Views: staging.clean_stg_user_data, staging.clean_stg_user_job, staging.clean_stg_user_credit_card
+-- SCD Type 1 loading script 
 
-WITH 
--- Step 1: Get base customer info from staging.stg_user_data
-user_data AS (
-    SELECT
-        user_id,
-        TRIM(name) AS name,
-        TRIM(gender) AS gender,
-        birthdate,
-        creation_date,
-        INITCAP(TRIM(street)) AS street,
-        TRIM(city) AS city,
-        TRIM(state) AS state,
-        TRIM(country) AS country,
-        TRIM(device_address) AS device_address,
-        TRIM(user_type) AS user_type
-    FROM staging.stg_user_data
-),
-
--- Step 2: Get job info from staging.stg_user_job
-job_data AS (
-    SELECT
-        user_id,
-        TRIM(job_title) AS job_title,
-        TRIM(job_level) AS job_level
-    FROM staging.stg_user_job
-),
-
--- Step 3: Get credit card info from staging.stg_user_credit_card
-credit_data AS (
-    SELECT
-        user_id,
-        TRIM(credit_card_number) AS credit_card_number,
-        TRIM(issuing_bank) AS issuing_bank
-    FROM staging.stg_user_credit_card
-),
-
--- Step 4: Join all sources together
-combined AS (
+WITH clean_source AS (
     SELECT
         u.user_id,
         u.name,
@@ -55,19 +19,21 @@ combined AS (
         j.job_level,
         c.credit_card_number,
         c.issuing_bank
-    FROM user_data u
-    LEFT JOIN job_data j ON u.user_id = j.user_id
-    LEFT JOIN credit_data c ON u.user_id = c.user_id
-    WHERE u.user_id IS NOT NULL
+    FROM staging.clean_stg_user_data u
+    LEFT JOIN staging.clean_stg_user_job j
+        ON u.user_id = j.user_id
+    LEFT JOIN staging.clean_stg_user_credit_card c
+        ON u.user_id = c.user_id
 ),
-
--- Step 5: Deduplicate by business key (user_id), keep latest ingestion_date if available
-deduped AS (
-    SELECT *
-    FROM combined
+ranked_source AS (
+    SELECT
+        cs.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY cs.user_id
+            ORDER BY cs.creation_date DESC
+        ) AS row_num
+    FROM clean_source cs
 )
-
--- Step 6: UPSERT into DimCustomer
 INSERT INTO warehouse.DimCustomer (
     user_id,
     name,
@@ -101,9 +67,29 @@ SELECT
     job_level,
     credit_card_number,
     issuing_bank
-FROM deduped
-ON CONFLICT (user_id)
-DO NOTHING;  -- Skip if customer_id already exists
+FROM ranked_source
+WHERE row_num = 1
 
--- Optional: Check how many rows loaded
+ON CONFLICT (user_id)
+DO UPDATE SET
+    name = EXCLUDED.name,
+    gender = EXCLUDED.gender,
+    birthdate = EXCLUDED.birthdate,
+    creation_date = EXCLUDED.creation_date,
+    street = EXCLUDED.street,
+    city = EXCLUDED.city,
+    state = EXCLUDED.state,
+    country = EXCLUDED.country,
+    device_address = EXCLUDED.device_address,
+    user_type = EXCLUDED.user_type,
+    job_title = EXCLUDED.job_title,
+    job_level = EXCLUDED.job_level,
+    credit_card_number = EXCLUDED.credit_card_number,
+    issuing_bank = EXCLUDED.issuing_bank;
+
+
+-- Optional: Check how many rows loaded (ensure not loading twice)
 -- SELECT COUNT(*) FROM warehouse.DimCustomer;
+
+-- Check data
+-- SELECT * FROM warehouse.DimCustomer ORDER BY customer_key LIMIT 10;
