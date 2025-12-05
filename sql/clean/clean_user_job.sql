@@ -40,7 +40,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY user_id, name, job_title, job_level, source_filename
+                PARTITION BY user_id, name, job_title, job_level
                 ORDER BY ingestion_date
             ) AS exact_dup_rank
         FROM cleaned
@@ -52,7 +52,7 @@ dup_flag AS (
     SELECT
         *,
         COUNT(*) OVER (PARTITION BY user_id) AS dup_count
-    FROM cleaned_dedup
+    FROM dedup_exact
 )
 SELECT
     user_id,
