@@ -30,7 +30,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY user_id, name, credit_card_number, issuing_bank, source_filename
+                PARTITION BY user_id, name, credit_card_number, issuing_bank
                 ORDER BY ingestion_date
             ) AS exact_dup_rank
         FROM cleaned

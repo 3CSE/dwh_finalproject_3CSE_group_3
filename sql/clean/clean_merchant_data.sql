@@ -53,10 +53,7 @@ cleaned AS (
             ELSE TRIM(country)
         END AS country,
 
-        -- Contact Number Cleaning:
-        -- 1. Remove all non-numeric characters
-        -- 2. Insert dashes every 3-3-4 (if possible)
-        -- 3. Remove accidental leading dashes
+        -- Contact number: Clean and format
         CASE 
             WHEN contact_number IS NULL OR TRIM(contact_number) = '' 
                 THEN 'Unknown'
@@ -79,14 +76,14 @@ cleaned AS (
       AND TRIM(merchant_id) != ''
 ),
 
--- Remove exact duplicates)
+-- Remove exact duplicates
 dedup_exact AS (
     SELECT *
     FROM (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY merchant_id, creation_date, name, street, state, city, country, contact_number, source_filename
+                PARTITION BY merchant_id, creation_date, name, street, state, city, country, contact_number
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned

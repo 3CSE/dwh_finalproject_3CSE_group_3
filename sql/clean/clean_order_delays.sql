@@ -27,7 +27,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY order_id, delay_in_days, source_filename
+                PARTITION BY order_id, delay_in_days
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned

@@ -34,7 +34,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY order_id, user_id, estimated_arrival, transaction_date, source_filename
+                PARTITION BY order_id, user_id, estimated_arrival, transaction_date
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned

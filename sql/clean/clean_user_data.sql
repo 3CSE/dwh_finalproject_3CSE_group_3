@@ -42,7 +42,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY user_id, creation_date, name, street, state, city, country, birthdate, gender, device_address, user_type, source_filename
+                PARTITION BY user_id, creation_date, name, street, state, city, country, birthdate, gender, device_address, user_type
                 ORDER BY ingestion_date
             ) AS exact_dup_rank
         FROM cleaned
