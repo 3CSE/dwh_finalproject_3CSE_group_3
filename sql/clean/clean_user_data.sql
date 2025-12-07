@@ -39,7 +39,7 @@ cleaned AS (
             COALESCE(TO_CHAR(birthdate,'YYYY-MM-DD HH24:MI:SS'),'') || '_' ||
             LOWER(TRIM(gender)) || '_' ||
             COALESCE(TO_CHAR(creation_date,'YYYY-MM-DD HH24:MI:SS'),'')
-        ) AS business_key
+        ) AS user_bk
     FROM source_data
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
 ),
@@ -49,7 +49,7 @@ dedup_exact AS (
     FROM (
         SELECT *,
             ROW_NUMBER() OVER (
-                PARTITION BY business_key, name, street, state, city, country, device_address, user_type
+                PARTITION BY user_bk, name, street, state, city, country, device_address, user_type
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned
@@ -60,11 +60,11 @@ dedup_exact AS (
 dup_count AS (
     SELECT
         *,
-        COUNT(business_key) OVER (PARTITION BY user_id) AS dup_count_value
+        COUNT(user_bk) OVER (PARTITION BY user_id) AS dup_count_value
     FROM dedup_exact
 )
 SELECT
-    business_key,
+    user_bk,
     user_id,
     creation_date,
     name,
@@ -87,7 +87,7 @@ FROM dup_count;
 -- SELECT COUNT(*) FROM staging.stg_user_data;
 
 -- Check cleaned data
--- SELECT COUNT(*) FROM staging.clean_stg_user_data WHERE is_duplicate = TRUE;
+-- SELECT * FROM staging.clean_stg_user_data WHERE is_duplicate = TRUE LIMIT 20;
 -- SELECT * FROM staging.stg_user_data LIMIT 20;
 
 -- Test if the columns for creating business key is enough
