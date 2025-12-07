@@ -15,8 +15,8 @@ cleaned AS (
     SELECT
         TRIM(user_id) AS user_id,
         COALESCE(INITCAP(TRIM(name)), 'Unknown') AS name,
-        INITCAP(COALESCE(NULLIF(TRIM(job_title), ''), 'Unknown')) AS job_title,
-        INITCAP(COALESCE(NULLIF(TRIM(job_level), ''), 'Unknown')) AS job_level,
+        COALESCE(NULLIF(NULLIF(INITCAP(TRIM(job_title)), 'Nan'), ''), 'Unknown') AS job_title,
+        COALESCE(NULLIF(NULLIF(INITCAP(TRIM(job_level)), 'Nan'), ''), 'Unknown') AS job_level,
         source_filename,
         ingestion_date
     FROM source_data
@@ -70,7 +70,7 @@ FROM dup_count;
 
 -- Check the cleaned data
 -- SELECT * FROM staging.stg_user_job LIMIT 50;
--- SELECT * FROM staging.clean_stg_user_job LIMIT 50;
+SELECT * FROM staging.clean_stg_user_job LIMIT 50;
 /*
 with duplicate as (
     select *,

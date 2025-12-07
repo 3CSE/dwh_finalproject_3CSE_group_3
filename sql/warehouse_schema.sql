@@ -43,7 +43,11 @@ CREATE TABLE warehouse.DimStaff (
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT UNIQUE,
+    user_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
+    user_id TEXT,
     name TEXT,
     gender TEXT,
     birthdate TIMESTAMP,
