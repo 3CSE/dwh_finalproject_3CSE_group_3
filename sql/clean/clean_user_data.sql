@@ -31,17 +31,17 @@ cleaned AS (
         COALESCE(TRIM(device_address), 'unknown') AS device_address,
         COALESCE(LOWER(TRIM(user_type)), 'unknown') AS user_type,
         source_filename,
-        ingestion_date,
-        -- New Business Key Generation (concatenated user_id, birthdate, gender, and creation_date)
-        -- These columns doesn't change or at least often
-        MD5(
-            LOWER(TRIM(user_id)) || '_' ||
-            COALESCE(TO_CHAR(birthdate,'YYYY-MM-DD HH24:MI:SS'),'') || '_' ||
-            LOWER(TRIM(gender)) || '_' ||
-            COALESCE(TO_CHAR(creation_date,'YYYY-MM-DD HH24:MI:SS'),'')
-        ) AS user_bk
+        ingestion_date
     FROM source_data
     WHERE user_id IS NOT NULL AND TRIM(user_id) != ''
+),
+keyed_data AS (
+    SELECT
+        t1.*,
+        t2.user_bk
+    FROM cleaned t1
+    JOIN staging.user_identity_lookup t2
+    ON t1.user_id = t2.user_id AND t1.name = t2.name
 ),
 -- Remove exact duplicates
 dedup_exact AS (
@@ -49,10 +49,10 @@ dedup_exact AS (
     FROM (
         SELECT *,
             ROW_NUMBER() OVER (
-                PARTITION BY user_bk, name, street, state, city, country, device_address, user_type
+                PARTITION BY user_bk, creation_date, birthdate, gender, street, state, city, country, device_address, user_type
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
-        FROM cleaned
+        FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
 ),
@@ -87,16 +87,5 @@ FROM dup_count;
 -- SELECT COUNT(*) FROM staging.stg_user_data;
 
 -- Check cleaned data
--- SELECT * FROM staging.clean_stg_user_data WHERE is_duplicate = TRUE LIMIT 20;
+-- SELECT * FROM staging.clean_stg_user_data LIMIT 20;
 -- SELECT * FROM staging.stg_user_data LIMIT 20;
-
--- Test if the columns for creating business key is enough
-/*
-WITH duplicate AS (
-    SELECT *,
-    -- Columns used in business key generation
-    ROW_NUMBER() OVER (PARTITION BY user_id, gender, birthdate) AS rn
-    FROM staging.clean_stg_user_data
-)
-SELECT * FROM duplicate WHERE rn > 1;
-*/
