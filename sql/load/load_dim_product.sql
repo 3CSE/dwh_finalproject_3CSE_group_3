@@ -73,3 +73,6 @@ WHERE
     existing_bk IS NULL
     OR
     is_data_changed = TRUE;
+
+--check loaded data
+-- select count(*) from warehouse.DimProduct;

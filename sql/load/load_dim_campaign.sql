@@ -21,3 +21,6 @@ DO UPDATE SET
     campaign_name = EXCLUDED.campaign_name,
     campaign_description = EXCLUDED.campaign_description,
     discount_value = EXCLUDED.discount_value;
+
+-- check loaded data
+-- select count(*) from warehouse.DimCampaign;

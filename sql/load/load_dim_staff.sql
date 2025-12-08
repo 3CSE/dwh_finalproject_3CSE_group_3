@@ -81,7 +81,13 @@ INSERT INTO warehouse.DimStaff (
     staff_attribute_hash
 )
 SELECT
-    staff_bk, staff_id, TRUE, CURRENT_TIMESTAMP, NULL,
+    staff_bk, staff_id, TRUE, 
+    -- FIX: Use creation_date for new records, CURRENT_TIMESTAMP for changed records
+    CASE 
+        WHEN existing_bk IS NULL THEN creation_date 
+        ELSE CURRENT_TIMESTAMP 
+    END AS effective_date, 
+    NULL,
     name, job_level, street, city, state, country, contact_number, creation_date,
     staff_attribute_hash
 FROM changes
@@ -89,3 +95,6 @@ WHERE
     existing_bk IS NULL
     OR
     is_data_changed = TRUE;
+
+-- check loaded data
+-- select count(*) from warehouse.DimStaff;

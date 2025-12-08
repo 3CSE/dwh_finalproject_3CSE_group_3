@@ -58,13 +58,18 @@ INSERT INTO warehouse.DimMerchant (
     name, creation_date, street, city, state, country, contact_number
 )
 SELECT
-    merchant_bk, merchant_id, TRUE, CURRENT_TIMESTAMP, NULL,
+    merchant_bk, merchant_id, TRUE, 
+    CASE 
+        WHEN existing_bk IS NULL THEN creation_date 
+        ELSE CURRENT_TIMESTAMP 
+    END AS effective_date, 
+    NULL,
     name, creation_date, street, city, state, country, contact_number
 FROM changes
 WHERE
     existing_bk IS NULL     
     OR
-    is_data_changed = TRUE; 
+    is_data_changed = TRUE;
 
 -- Optional: Check how many rows loadedE
 -- SELECT COUNT(*) FROM warehouse.DimMerchant;

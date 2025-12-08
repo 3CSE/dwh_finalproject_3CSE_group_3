@@ -25,9 +25,13 @@ cleaned AS (
 ),
 keyed_data AS (
     SELECT
-        c.order_id, c.merchant_id, c.staff_id,
-        m_lookup.merchant_bk, s_lookup.staff_bk,
-        c.source_filename, c.ingestion_date
+        c.order_id,
+        c.merchant_id,
+        c.staff_id,
+        m_lookup.merchant_bk,
+        s_lookup.staff_bk,
+        c.source_filename,
+        c.ingestion_date
     FROM cleaned c
     LEFT JOIN staging.merchant_identity_lookup m_lookup ON c.merchant_id = m_lookup.merchant_id
     LEFT JOIN staging.staff_identity_lookup s_lookup ON c.staff_id = s_lookup.staff_id
@@ -38,7 +42,7 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY order_id, merchant_bk, staff_bk 
+                PARTITION BY order_id 
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM keyed_data
@@ -47,14 +51,14 @@ dedup_exact AS (
 )
 SELECT
     order_id,
-    merchant_bk,
-    staff_bk,
     merchant_id,
+    merchant_bk,
     staff_id,
+    staff_bk,
     source_filename,
     ingestion_date
 FROM dedup_exact;
 
 -- Check view
-SELECT * FROM staging.clean_stg_order_merchant LIMIT 10;
+-- SELECT count(*) FROM staging.clean_stg_order_merchant;
 -- SELECT COUNT(*) FROM staging.stg_order_merchant;

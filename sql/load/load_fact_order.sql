@@ -6,104 +6,74 @@
 --   - staging.view_clean_campaign_transactions (order_id, campaign_id, availed)
 -- Strategy: Join all order-related views, resolve dimension keys, calculate metrics
 
-WITH order_base AS (
-    SELECT
-        o.order_id,
-        o.user_id,
-        o.transaction_date,
-        o.estimated_arrival,
-        om.merchant_id,
-        om.staff_id,
-        od.delay_in_days,
-        ct.campaign_id,
-        ct.availed AS availed_flag
-    FROM staging.clean_stg_orders o
-    LEFT JOIN staging.view_clean_order_merchant om
-        ON o.order_id = om.order_id
-    LEFT JOIN staging.clean_stg_order_delays od
-        ON o.order_id = od.order_id
-    LEFT JOIN staging.view_clean_campaign_transactions ct
-        ON o.order_id = ct.order_id
-    WHERE o.order_id IS NOT NULL
+WITH 
+orders AS (
+    SELECT 
+        order_id, 
+        user_id, 
+        estimated_arrival, 
+        transaction_date,
+        TO_CHAR(transaction_date, 'YYYYMMDD')::INT AS transaction_date_key,
+        TO_CHAR(
+            transaction_date + (estimated_arrival || ' days')::INTERVAL, 
+            'YYYYMMDD'
+        )::INT AS estimated_arrival_date_key
+    FROM staging.clean_stg_orders
 ),
-line_item_aggregates AS (
-    SELECT
+
+-- Bridge: Merchant & Staff
+bridge AS (
+    SELECT order_id, merchant_bk, staff_bk
+    FROM staging.clean_stg_order_merchant 
+),
+
+-- Campaigns (force 1 campaign per order)
+campaigns AS (
+    SELECT 
+        order_id, 
+        campaign_id, 
+        availed
+    FROM (
+        SELECT 
+            order_id, 
+            campaign_id, 
+            availed,
+            ROW_NUMBER() OVER (
+                PARTITION BY order_id 
+                ORDER BY availed DESC, ingestion_date DESC
+            ) AS rn
+        FROM staging.clean_stg_campaign_transactions
+    ) t
+    WHERE rn = 1
+),
+
+delays AS (
+    SELECT order_id, delay_in_days
+    FROM staging.clean_stg_order_delays
+),
+
+-- Aggregation for metrics in fact order table
+metrics AS (
+    SELECT 
         order_id,
-        COUNT(*) AS number_of_items,
-        SUM(line_total_amount) AS order_total_amount
-    FROM warehouse.FactOrderLineItem
+        SUM(quantity) AS total_items,
+        SUM(line_total_amount) AS raw_order_total
+    FROM (
+        SELECT DISTINCT order_id, price, quantity, line_total_amount 
+        FROM staging.view_clean_line_items_prices
+    ) unique_lines
     GROUP BY order_id
-),
-order_with_metrics AS (
-    SELECT
-        ob.*,
-        COALESCE(li.number_of_items, 0) AS number_of_items,
-        COALESCE(li.order_total_amount, 0.00) AS order_total_amount,
-        -- Calculate estimated arrival date
-        CASE
-            WHEN ob.estimated_arrival IS NOT NULL AND ob.transaction_date IS NOT NULL
-            THEN (ob.transaction_date::DATE + ob.estimated_arrival * INTERVAL '1 day')::DATE
-            ELSE NULL
-        END AS estimated_arrival_date,
-        -- Calculate actual arrival date
-        CASE
-            WHEN ob.delay_in_days IS NOT NULL 
-                 AND ob.estimated_arrival IS NOT NULL 
-                 AND ob.transaction_date IS NOT NULL
-            THEN (ob.transaction_date::DATE + ob.estimated_arrival * INTERVAL '1 day' + ob.delay_in_days * INTERVAL '1 day')::DATE
-            WHEN ob.estimated_arrival IS NOT NULL AND ob.transaction_date IS NOT NULL
-            THEN (ob.transaction_date::DATE + ob.estimated_arrival * INTERVAL '1 day')::DATE
-            ELSE NULL
-        END AS actual_arrival_date
-    FROM order_base ob
-    LEFT JOIN line_item_aggregates li
-        ON ob.order_id = li.order_id
-),
-order_with_dimensions AS (
-    SELECT
-        owm.*,
-        dc.customer_key,
-        dm.merchant_key,
-        ds.staff_key,
-        dc_campaign.campaign_key,
-        -- Date keys
-        TO_NUMBER(TO_CHAR(owm.transaction_date::DATE, 'YYYYMMDD'), '99999999') AS transaction_date_key,
-        CASE
-            WHEN owm.estimated_arrival_date IS NOT NULL
-            THEN TO_NUMBER(TO_CHAR(owm.estimated_arrival_date, 'YYYYMMDD'), '99999999')
-            ELSE NULL
-        END AS estimated_arrival_date_key,
-        CASE
-            WHEN owm.actual_arrival_date IS NOT NULL
-            THEN TO_NUMBER(TO_CHAR(owm.actual_arrival_date, 'YYYYMMDD'), '99999999')
-            ELSE NULL
-        END AS actual_arrival_date_key,
-        -- Discount amount (if campaign availed)
-        CASE
-            WHEN owm.availed_flag = TRUE AND dc_campaign.discount_value IS NOT NULL
-            THEN dc_campaign.discount_value
-            ELSE 0.00
-        END AS discount_amount
-    FROM order_with_metrics owm
-    LEFT JOIN warehouse.DimCustomer dc
-        ON TRIM(owm.user_id) = TRIM(dc.user_id)
-    LEFT JOIN warehouse.DimMerchant dm
-        ON UPPER(TRIM(owm.merchant_id)) = UPPER(TRIM(dm.merchant_id))
-    LEFT JOIN warehouse.DimStaff ds
-        ON UPPER(TRIM(owm.staff_id)) = UPPER(TRIM(ds.staff_id))
-    LEFT JOIN warehouse.DimCampaign dc_campaign
-        ON UPPER(TRIM(owm.campaign_id)) = UPPER(TRIM(dc_campaign.campaign_id))
-    WHERE dc.customer_key IS NOT NULL  -- Customer is required
 )
+
 INSERT INTO warehouse.FactOrder (
     order_id,
     customer_key,
     merchant_key,
     staff_key,
+    campaign_key,
     transaction_date_key,
     estimated_arrival_date_key,
     actual_arrival_date_key,
-    campaign_key,
     availed_flag,
     order_total_amount,
     discount_amount,
@@ -111,43 +81,148 @@ INSERT INTO warehouse.FactOrder (
     number_of_items,
     delay_in_days
 )
-SELECT
-    order_id,
-    customer_key,
-    merchant_key,
-    staff_key,
-    transaction_date_key,
-    estimated_arrival_date_key,
-    actual_arrival_date_key,
-    campaign_key,
-    COALESCE(availed_flag, FALSE) AS availed_flag,
-    order_total_amount,
-    discount_amount,
-    (order_total_amount - discount_amount) AS net_order_amount,
-    number_of_items,
-    delay_in_days
-FROM order_with_dimensions
-WHERE transaction_date_key IS NOT NULL  -- Transaction date is required
+SELECT DISTINCT ON (o.order_id)
+    o.order_id,
+    
+    COALESCE(cust.customer_key, -1) AS customer_key,
+    COALESCE(merch.merchant_key, -1) AS merchant_key,
+    COALESCE(stf.staff_key, -1) AS staff_key,
+    COALESCE(cmp.campaign_key, -1) AS campaign_key,
+    
+    o.transaction_date_key,
+    o.estimated_arrival_date_key,
+    
+    TO_CHAR(
+        TO_DATE(o.estimated_arrival_date_key::TEXT, 'YYYYMMDD') + (COALESCE(d.delay_in_days, 0) || ' days')::INTERVAL, 
+        'YYYYMMDD'
+    )::INT AS actual_arrival_date_key,
 
-ON CONFLICT (order_id)
+    COALESCE(c.availed, FALSE) AS availed_flag,
+
+    COALESCE(m.raw_order_total, 0.00) AS order_total_amount,
+    
+    CAST(
+        CASE 
+            WHEN COALESCE(c.availed, FALSE) = TRUE THEN 
+                COALESCE(m.raw_order_total, 0.00) * COALESCE(cmp.discount_value, 0)
+            ELSE 0.00 
+        END
+    AS NUMERIC(18,2)) AS discount_amount,
+    
+    CAST(
+        COALESCE(m.raw_order_total, 0.00) - 
+        CASE 
+            WHEN COALESCE(c.availed, FALSE) = TRUE THEN 
+                COALESCE(m.raw_order_total, 0.00) * COALESCE(cmp.discount_value, 0)
+            ELSE 0.00 
+        END
+    AS NUMERIC(18,2)) AS net_order_amount,
+
+    COALESCE(m.total_items, 0) AS number_of_items,
+    COALESCE(d.delay_in_days, 0) AS delay_in_days
+
+FROM orders o
+LEFT JOIN bridge b ON o.order_id = b.order_id
+LEFT JOIN campaigns c ON o.order_id = c.order_id
+LEFT JOIN delays d ON o.order_id = d.order_id
+LEFT JOIN metrics m ON o.order_id = m.order_id
+
+-- JOINS
+LEFT JOIN warehouse.DimCustomer cust 
+    ON o.user_id = cust.user_id 
+    AND o.transaction_date >= cust.effective_date 
+    AND (cust.end_date IS NULL OR o.transaction_date < cust.end_date)
+
+LEFT JOIN warehouse.DimMerchant merch 
+    ON b.merchant_bk = merch.merchant_bk 
+    AND o.transaction_date >= merch.effective_date 
+    AND (merch.end_date IS NULL OR o.transaction_date < merch.end_date)
+
+LEFT JOIN warehouse.DimStaff stf 
+    ON b.staff_bk = stf.staff_bk 
+    AND o.transaction_date >= stf.effective_date 
+    AND (stf.end_date IS NULL OR o.transaction_date < stf.end_date)
+
+LEFT JOIN warehouse.DimCampaign cmp 
+    ON c.campaign_id = cmp.campaign_id
+
+ORDER BY o.order_id, cust.effective_date DESC, merch.effective_date DESC
+
+ON CONFLICT (order_id) 
 DO UPDATE SET
-    customer_key = EXCLUDED.customer_key,
-    merchant_key = EXCLUDED.merchant_key,
-    staff_key = EXCLUDED.staff_key,
-    transaction_date_key = EXCLUDED.transaction_date_key,
-    estimated_arrival_date_key = EXCLUDED.estimated_arrival_date_key,
+    order_total_amount = EXCLUDED.order_total_amount,
+    net_order_amount = EXCLUDED.net_order_amount,
+    discount_amount = EXCLUDED.discount_amount,
+    number_of_items = EXCLUDED.number_of_items,
+    delay_in_days = EXCLUDED.delay_in_days,
     actual_arrival_date_key = EXCLUDED.actual_arrival_date_key,
     campaign_key = EXCLUDED.campaign_key,
-    availed_flag = EXCLUDED.availed_flag,
-    order_total_amount = EXCLUDED.order_total_amount,
-    discount_amount = EXCLUDED.discount_amount,
-    net_order_amount = EXCLUDED.net_order_amount,
-    number_of_items = EXCLUDED.number_of_items,
-    delay_in_days = EXCLUDED.delay_in_days;
+    availed_flag = EXCLUDED.availed_flag;
 
 -- Optional: Check how many rows loaded
 -- SELECT COUNT(*) FROM warehouse.FactOrder;
 
 -- Check data loaded
--- SELECT * FROM warehouse.FactOrder ORDER BY order_id LIMIT 10;
+-- SELECT * FROM warehouse.FactOrder LIMIT 10;
 
+-- SELECT * from warehouse.factorder where campaign_key > -1;
+-- select count(*) from warehouse.dimcampaign;
+-- select count(*) from warehouse.dimcustomer;
+-- select count(*) from warehouse.dimdate;
+-- select count(*) from warehouse.dimmerchant;
+-- select count(*) from warehouse.dimproduct;
+-- select count(*) from warehouse.dimstaff;
+
+-- select * from warehouse.factorder limit 10;
+
+-- truncate table warehouse.factorder;
+
+/*
+Run Before Loading to Fact table
+
+INSERT INTO warehouse.DimStaff (
+    staff_key, staff_bk, staff_id, name, 
+    is_current, effective_date, end_date, staff_attribute_hash
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 
+    'UNKNOWN', 
+    'UNKNOWN', 
+    'Unknown Staff', 
+    TRUE, 
+    '1900-01-01', 
+    NULL, 
+    MD5('UNKNOWN')
+)
+ON CONFLICT (staff_key) DO NOTHING;
+
+INSERT INTO warehouse.DimMerchant (
+    merchant_key, merchant_bk, merchant_id, name, 
+    is_current, effective_date, end_date
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'UNKNOWN', 'Unknown Merchant', TRUE, '1900-01-01', NULL
+)
+ON CONFLICT (merchant_key) DO NOTHING;
+
+INSERT INTO warehouse.DimCustomer (
+    customer_key, user_bk, user_id, name, 
+    is_current, effective_date, end_date
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'UNKNOWN', 'Unknown Customer', TRUE, '1900-01-01', NULL
+)
+ON CONFLICT (customer_key) DO NOTHING;
+
+INSERT INTO warehouse.DimCampaign (
+    campaign_key, campaign_id, campaign_name, campaign_description, discount_value
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'Unknown Campaign', 'Unknown', 0
+)
+ON CONFLICT (campaign_key) DO NOTHING;
+*/

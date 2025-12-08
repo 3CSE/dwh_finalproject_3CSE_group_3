@@ -67,14 +67,20 @@ INSERT INTO warehouse.DimCustomer (
     device_address, user_type, job_title, job_level, credit_card_number, issuing_bank
 )
 SELECT
-    user_bk, user_id, TRUE, CURRENT_TIMESTAMP, NULL,
+    user_bk, user_id, TRUE, 
+    -- FIX: Use creation_date for new records, CURRENT_TIMESTAMP for changed records
+    CASE 
+        WHEN existing_bk IS NULL THEN creation_date 
+        ELSE CURRENT_TIMESTAMP 
+    END AS effective_date, 
+    NULL,
     name, gender, birthdate, creation_date, street, city, state, country, 
     device_address, user_type, job_title, job_level, credit_card_number, issuing_bank
 FROM changes
 WHERE
-    existing_bk IS NULL    -- New Users
+    existing_bk IS NULL     
     OR
-    is_data_changed = TRUE; -- Changed Users
+    is_data_changed = TRUE; 
 
 -- Test the DimCustomer table
 -- select count(*) from warehouse.DimCustomer;
