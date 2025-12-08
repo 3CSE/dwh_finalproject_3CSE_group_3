@@ -1,3 +1,9 @@
+/*
+Generates a deterministic Business Key using staff_id and creation_date
+
+This business key is propagated and consumed by downstream cleaning views: clean_staff and order_merchant 
+*/
+
 CREATE OR REPLACE VIEW staging.staff_identity_lookup AS
 WITH identity_source AS (
     SELECT
