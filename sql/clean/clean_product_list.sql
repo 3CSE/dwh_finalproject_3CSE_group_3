@@ -1,6 +1,6 @@
 -- View: Clean Product Dimension
 -- Source Table: staging.stg_product_list
--- Target Usage: Populates warehouse.DimProduct and FactOrderLineItem
+-- Lookup View: staging.product_identity_lookup
 
 CREATE OR REPLACE VIEW staging.view_clean_product_list AS
 WITH source_data AS (
@@ -36,38 +36,60 @@ cleaned AS (
 
         INITCAP(REPLACE(TRIM(product_type), '_', ' ')) AS product_type,
 
-        COALESCE(price, 0.00) AS price,
+        CASE
+            WHEN COALESCE(price, 0.00) < 0 THEN 0.00
+            ELSE COALESCE(price, 0.00)
+        END AS price,
         
         source_filename,
         ingestion_date
     FROM source_data
     WHERE product_id IS NOT NULL AND TRIM(product_id) != '' 
 ),
+with_bk AS (
+    SELECT
+        c.*,
+        lookup.product_bk -- Attach the stable Business Key
+    FROM cleaned c
+    INNER JOIN staging.product_identity_lookup lookup
+        ON c.product_id = lookup.product_id
+        AND LOWER(c.product_name) = lookup.product_name 
+        AND LOWER(c.product_type) = lookup.product_type 
+),
+
+hashed AS (
+    SELECT
+        *,
+
+        MD5(
+            COALESCE(CAST(price AS TEXT), '')
+        ) AS product_attribute_hash
+    FROM with_bk
+),
 ranked AS (
+
     SELECT
         *,
         ROW_NUMBER() OVER (
             PARTITION BY 
-                product_id, product_name, product_type, price, source_filename, ingestion_date
+                product_id, product_name, product_type, price, product_bk, product_attribute_hash, source_filename, ingestion_date
             ORDER BY 
-                ingestion_date
-        ) AS row_num,
+                ingestion_date DESC 
+        ) AS row_num
         
-        COUNT(*) OVER (PARTITION BY product_id) AS conflict_dup_count
-    FROM cleaned
+
+    FROM hashed
 )
+-- Final SELECT: Filter to the latest exact match and include the new keys
 SELECT
     product_id,
+    product_bk,
     product_name,
     product_type,
     price,
+    product_attribute_hash,
     source_filename,
-    ingestion_date,
-
-    CASE 
-        WHEN conflict_dup_count > 1 THEN TRUE
-        ELSE FALSE
-    END AS is_duplicate
+    ingestion_date
  
 FROM ranked
 WHERE row_num = 1;

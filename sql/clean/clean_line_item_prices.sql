@@ -15,7 +15,14 @@ WITH source_data AS (
 cleaned AS (
     SELECT
         TRIM(order_id) AS order_id,
-        CAST(COALESCE(price, 0.00) AS NUMERIC(18, 2)) AS price,
+        
+        CAST(
+            CASE 
+                WHEN COALESCE(price, 0.00) < 0 THEN 0.00
+                ELSE COALESCE(price, 0.00) 
+            END 
+        AS NUMERIC(18, 2)) AS price,
+        
         CAST(
             NULLIF(REGEXP_REPLACE(quantity, '[^0-9]', '', 'g'), '')
             AS INT
@@ -24,7 +31,9 @@ cleaned AS (
         source_filename,
         ingestion_date
     FROM source_data
-    WHERE order_id IS NOT NULL AND TRIM(order_id) != '' 
+    WHERE 
+        order_id IS NOT NULL AND TRIM(order_id) != ''
+        AND CAST(NULLIF(REGEXP_REPLACE(quantity, '[^0-9]', '', 'g'), '') AS INT) >= 0
 ),
 with_line_total AS (
     SELECT
@@ -37,15 +46,15 @@ with_line_total AS (
     FROM cleaned
 ),
 ranked AS (
+
     SELECT
         *,
         ROW_NUMBER() OVER (
             PARTITION BY 
                 order_id, price, quantity, line_total_amount, source_filename, ingestion_date
             ORDER BY 
-                ingestion_date
-        ) AS row_num,
-        COUNT(*) OVER (PARTITION BY order_id) AS conflict_dup_count
+                ingestion_date DESC 
+        ) AS row_num
     FROM with_line_total
 )
 SELECT
@@ -54,11 +63,7 @@ SELECT
     quantity,
     line_total_amount,
     source_filename,
-    ingestion_date,
-    CASE 
-        WHEN conflict_dup_count > 1 THEN TRUE
-        ELSE FALSE
-    END AS is_duplicate
+    ingestion_date
  
 FROM ranked
 WHERE row_num = 1;
