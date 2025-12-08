@@ -77,7 +77,7 @@ CREATE TABLE warehouse.DimCustomer (
 DROP TABLE IF EXISTS warehouse.DimCampaign;
 CREATE TABLE warehouse.DimCampaign (
     campaign_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    campaign_id TEXT,
+    campaign_id TEXT UNIQUE,
     campaign_name TEXT,
     campaign_description TEXT,
     discount_value NUMERIC(18,2)
