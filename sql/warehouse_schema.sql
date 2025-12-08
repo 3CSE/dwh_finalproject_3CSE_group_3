@@ -1,16 +1,19 @@
 CREATE SCHEMA IF NOT EXISTS warehouse;
 
--- DimProduct
 DROP TABLE IF EXISTS warehouse.DimProduct;
 CREATE TABLE warehouse.DimProduct (
     product_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    product_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
     product_id TEXT,
     product_name TEXT,
     product_type TEXT,
-    price NUMERIC(18,2)
+    price NUMERIC(18,2),
+    product_attribute_hash TEXT
 );
 
--- DimMerchant
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -28,11 +31,14 @@ CREATE TABLE warehouse.DimMerchant (
     creation_date TIMESTAMP
 );
 
--- DimStaff
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT UNIQUE,
+    staff_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
+    staff_id TEXT,
     name TEXT,
     job_level TEXT,
     street TEXT,
@@ -40,10 +46,10 @@ CREATE TABLE warehouse.DimStaff (
     state TEXT,
     country TEXT,
     contact_number TEXT,
-    creation_date TIMESTAMP
+    creation_date TIMESTAMP,
+    staff_attribute_hash TEXT
 );
 
--- DimCustomer
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -68,7 +74,6 @@ CREATE TABLE warehouse.DimCustomer (
     issuing_bank TEXT
 );
 
--- DimCampaign
 DROP TABLE IF EXISTS warehouse.DimCampaign;
 CREATE TABLE warehouse.DimCampaign (
     campaign_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -78,7 +83,6 @@ CREATE TABLE warehouse.DimCampaign (
     discount_value NUMERIC(18,2)
 );
 
--- DimDate
 DROP TABLE IF EXISTS warehouse.DimDate;
 CREATE TABLE warehouse.DimDate (
     date_key INT PRIMARY KEY,
@@ -91,7 +95,6 @@ CREATE TABLE warehouse.DimDate (
     day_of_week INT
 );
 
--- FactOrder
 DROP TABLE IF EXISTS warehouse.FactOrder;
 CREATE TABLE warehouse.FactOrder (
     order_id TEXT PRIMARY KEY,
@@ -109,7 +112,6 @@ CREATE TABLE warehouse.FactOrder (
     number_of_items INT,
     delay_in_days INT,
     
-    -- Foreign Key Constraints
     CONSTRAINT fk_order_customer
         FOREIGN KEY (customer_key) REFERENCES warehouse.DimCustomer(customer_key),
     CONSTRAINT fk_order_merchant
@@ -126,7 +128,6 @@ CREATE TABLE warehouse.FactOrder (
         FOREIGN KEY (actual_arrival_date_key) REFERENCES warehouse.DimDate(date_key)
 );
 
---FactOrderLineItem
 DROP TABLE IF EXISTS warehouse.FactOrderLineItem;
 CREATE TABLE warehouse.FactOrderLineItem (
     line_item_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
