@@ -52,7 +52,6 @@ deactivate_old AS (
     RETURNING d.merchant_key
 )
 
--- insert new records for new and changed data
 INSERT INTO warehouse.DimMerchant (
     merchant_bk, merchant_id, is_current, effective_date, end_date,
     name, creation_date, street, city, state, country, contact_number
@@ -60,7 +59,7 @@ INSERT INTO warehouse.DimMerchant (
 SELECT
     merchant_bk, merchant_id, TRUE, 
     CASE 
-        WHEN existing_bk IS NULL THEN creation_date 
+        WHEN existing_bk IS NULL THEN '1900-01-01'::TIMESTAMP 
         ELSE CURRENT_TIMESTAMP 
     END AS effective_date, 
     NULL,

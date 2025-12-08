@@ -82,9 +82,8 @@ INSERT INTO warehouse.DimStaff (
 )
 SELECT
     staff_bk, staff_id, TRUE, 
-    -- FIX: Use creation_date for new records, CURRENT_TIMESTAMP for changed records
     CASE 
-        WHEN existing_bk IS NULL THEN creation_date 
+        WHEN existing_bk IS NULL THEN '1900-01-01'::TIMESTAMP 
         ELSE CURRENT_TIMESTAMP 
     END AS effective_date, 
     NULL,

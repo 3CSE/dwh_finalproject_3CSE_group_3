@@ -173,13 +173,13 @@ DO UPDATE SET
 -- select count(*) from warehouse.dimproduct;
 -- select count(*) from warehouse.dimstaff;
 
--- select * from warehouse.factorder limit 10;
+-- select * from warehouse.factorder where staff_key = -1 limit 10;
 
 -- truncate table warehouse.factorder;
 
-/*
-Run Before Loading to Fact table
 
+-- Run Before Loading to Fact table
+/*
 INSERT INTO warehouse.DimStaff (
     staff_key, staff_bk, staff_id, name, 
     is_current, effective_date, end_date, staff_attribute_hash
@@ -225,4 +225,5 @@ VALUES (
     -1, 'UNKNOWN', 'Unknown Campaign', 'Unknown', 0
 )
 ON CONFLICT (campaign_key) DO NOTHING;
+
 */
