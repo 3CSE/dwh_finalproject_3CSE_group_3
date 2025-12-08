@@ -55,13 +55,6 @@ dedup_exact AS (
         FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
-),
--- count duplicates based on natural key
-dup_count AS (
-    SELECT
-        *,
-        COUNT(user_bk) OVER (PARTITION BY user_id) AS dup_count_value
-    FROM dedup_exact
 )
 SELECT
     user_bk,
@@ -77,9 +70,8 @@ SELECT
     device_address,
     user_type,
     source_filename,
-    ingestion_date,
-    (dup_count_value > 1) AS is_duplicate
-FROM dup_count;
+    ingestion_date
+FROM dedup_exact;
 
 -- TEST VIEW
 -- check count
