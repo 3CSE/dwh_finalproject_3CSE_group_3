@@ -46,13 +46,6 @@ dedup_exact AS (
         FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
-),
--- Flag duplicates based on natural key
-dup_count AS (
-    SELECT
-        *,
-        COUNT(user_bk) OVER (PARTITION BY user_id) AS dup_count_value
-    FROM dedup_exact
 )
 SELECT
     user_bk,
@@ -61,9 +54,8 @@ SELECT
     credit_card_number,
     issuing_bank,
     source_filename,
-    ingestion_date,
-    (dup_count > 1) AS is_duplicate
-FROM dup_count;
+    ingestion_date
+FROM dedup_exact;
 
 -- Test the view
 -- Check count

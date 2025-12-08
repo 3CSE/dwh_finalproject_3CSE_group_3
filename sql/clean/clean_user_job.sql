@@ -44,13 +44,6 @@ dedup_exact AS (
         FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
-),
--- Flag duplicates based on user_id
-dup_count AS (
-    SELECT
-        *,
-        COUNT(user_bk) OVER (PARTITION BY user_id) AS dup_count_value
-    FROM dedup_exact
 )
 SELECT
     user_bk,
@@ -59,9 +52,8 @@ SELECT
     job_title,
     job_level,
     source_filename,
-    ingestion_date,
-    (dup_count_value > 1) AS is_duplicate
-FROM dup_count;
+    ingestion_date
+FROM dedup_exact;
 
 -- Test the view
 -- Check the count
@@ -70,7 +62,7 @@ FROM dup_count;
 
 -- Check the cleaned data
 -- SELECT * FROM staging.stg_user_job LIMIT 50;
-SELECT * FROM staging.clean_stg_user_job LIMIT 50;
+-- SELECT * FROM staging.clean_stg_user_job LIMIT 50;
 /*
 with duplicate as (
     select *,
