@@ -1,3 +1,9 @@
+/*
+Generates a deterministic Business Key using user_id, name, birthdate, gender, and creation_date.
+
+This business key is propagated and consumed by downstream cleaning views: clean_user_data, clean_user_job, and clean_user_credit_card 
+*/
+
 DROP VIEW IF EXISTS staging.user_identity_lookup CASCADE;
 CREATE OR REPLACE VIEW staging.user_identity_lookup AS
 WITH identity_source AS (

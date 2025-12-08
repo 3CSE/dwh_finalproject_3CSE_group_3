@@ -1,3 +1,9 @@
+/*
+Generates a deterministic Business Key using merchant_id, name, and creation_date.
+
+This business key is propagated and consumed by downstream cleaning views: clean_merchant_data and clean_order_merchant  
+*/
+
 CREATE OR REPLACE VIEW staging.merchant_identity_lookup AS
 WITH identity_source AS (
     SELECT
