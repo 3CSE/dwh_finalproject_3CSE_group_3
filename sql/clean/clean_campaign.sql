@@ -2,7 +2,7 @@
 -- Source Table: staging.stg_campaign
 -- Target Usage: Populates warehouse.DimCampaign
 
-CREATE OR REPLACE VIEW staging.view_clean_campaign AS
+CREATE OR REPLACE VIEW staging.clean_stg_campaign AS
 WITH source_data AS (
     SELECT
         campaign_id,
