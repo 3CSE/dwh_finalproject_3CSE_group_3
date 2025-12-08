@@ -97,14 +97,18 @@ CREATE TABLE warehouse.DimDate (
 
 DROP TABLE IF EXISTS warehouse.FactOrder;
 CREATE TABLE warehouse.FactOrder (
+    -- natural key
     order_id TEXT PRIMARY KEY,
+    -- foreign keys (SK from dimensions)
     customer_key INT,
     merchant_key INT,
     staff_key INT,
+    campaign_key INT,
+    -- Date keys
     transaction_date_key INT,
     estimated_arrival_date_key INT,
     actual_arrival_date_key INT,
-    campaign_key INT,
+    -- Facts/Metrics
     availed_flag BOOLEAN,
     order_total_amount NUMERIC(18,2),
     discount_amount NUMERIC(18,2),

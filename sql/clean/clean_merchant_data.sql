@@ -66,16 +66,7 @@ dedup_exact AS (
         FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
-),
-
--- count duplicates based on natural key (merchant_id)
-dup_count AS (
-    SELECT
-        *,
-        COUNT(*) OVER (PARTITION BY merchant_id) AS dup_count_value
-    FROM dedup_exact
 )
-
 SELECT
     merchant_bk,
     merchant_id,
@@ -87,10 +78,8 @@ SELECT
     country,
     contact_number,
     source_filename,
-    ingestion_date,
-    (dup_count_value > 1) AS is_duplicate
-
-FROM dup_count;
+    ingestion_date
+FROM dedup_exact;
 
 -- Test view
 -- Check counts

@@ -54,11 +54,6 @@ dedup_exact AS (
         FROM keyed_data
     ) t
     WHERE exact_dup_rank = 1
-),
-dup_count AS (
-    SELECT *,
-    COUNT(staff_bk) OVER (PARTITION BY staff_id) AS dup_count_value
-    FROM dedup_exact
 )
 SELECT
     staff_bk,
@@ -72,9 +67,8 @@ SELECT
     contact_number,
     creation_date,
     source_filename,
-    ingestion_date,
-    (dup_count_value > 1) is_duplicate
-FROM dup_count;
+    ingestion_date
+FROM dedup_exact;
 
 -- Test view
 -- Check counts
@@ -82,5 +76,5 @@ FROM dup_count;
 -- SELECT COUNT(*) FROM staging.view_clean_staff;
 
 -- Check the cleaned data
--- SELECT * FROM staging.view_clean_staff WHERE is_duplicate = TRUE LIMIT 50;
+-- SELECT * FROM staging.view_clean_staff LIMIT 50;
 -- SELECT * FROM staging.stg_merchant_data LIMIT 50;
