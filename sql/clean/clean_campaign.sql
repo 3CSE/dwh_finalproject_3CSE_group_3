@@ -37,12 +37,7 @@ cleaned AS (
         TRIM(campaign_description) AS campaign_description,
 
         COALESCE(
-            CAST(
-                NULLIF(
-                    REGEXP_REPLACE(discount, '[^0-9\.]', '', 'g')
-                    , ''
-                ) 
-            AS NUMERIC(18, 2)), 
+            CAST(NULLIF(REGEXP_REPLACE(discount, '[^0-9\.]', '', 'g'), '') AS NUMERIC(18, 4)) * 0.01,
             0.00
         ) AS discount_value,
 
@@ -51,18 +46,17 @@ cleaned AS (
     FROM source_data
     WHERE campaign_id IS NOT NULL AND TRIM(campaign_id) != '' 
 ),
-ranked AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY 
-                campaign_id, campaign_name, campaign_description, discount_value, source_filename, ingestion_date
-            ORDER BY 
-                ingestion_date
-        ) AS row_num,
-        
-        COUNT(*) OVER (PARTITION BY campaign_id) AS conflict_dup_count
-    FROM cleaned
+dedup_exact AS (
+    SELECT *
+    FROM (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY campaign_id 
+                ORDER BY ingestion_date DESC
+            ) AS exact_dup_rank
+        FROM cleaned
+    ) t
+    WHERE exact_dup_rank = 1
 )
 SELECT
     campaign_id,
@@ -70,12 +64,9 @@ SELECT
     campaign_description,
     discount_value,
     source_filename,
-    ingestion_date,
+    ingestion_date
+FROM dedup_exact;
 
-    CASE 
-        WHEN conflict_dup_count > 1 THEN TRUE
-        ELSE FALSE
-    END AS is_duplicate
- 
-FROM ranked
-WHERE row_num = 1;
+-- Check cleaned view
+-- SELECT * FROM staging.stg_campaign;
+-- SELECT * FROM staging.view_clean_campaign;

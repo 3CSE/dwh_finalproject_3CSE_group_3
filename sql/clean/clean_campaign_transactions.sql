@@ -2,7 +2,7 @@
 -- Source Table: staging.stg_campaign_transactions
 -- Target Usage: Provides Campaign link and dates for FactOrder
 
-CREATE OR REPLACE VIEW staging.view_clean_campaign_transactions AS
+CREATE OR REPLACE VIEW staging.clean_stg_campaign_transactions AS
 WITH source_data AS (
     SELECT
         campaign_id,
@@ -16,7 +16,7 @@ WITH source_data AS (
 ),
 cleaned AS (
     SELECT
-        TRIM(UPPER(campaign_id)) AS campaign_id,
+        TRIM(campaign_id) AS campaign_id,
         TRIM(order_id) AS order_id,
 
         transaction_date,
@@ -33,20 +33,20 @@ cleaned AS (
     WHERE order_id IS NOT NULL AND TRIM(order_id) != ''
     AND campaign_id IS NOT NULL AND TRIM(campaign_id) != ''
 ),
-ranked AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY 
-                campaign_id, order_id, transaction_date, estimated_arrival, availed, source_filename, ingestion_date
-            ORDER BY 
-                ingestion_date
-        ) AS row_num,
-        
-        COUNT(*) OVER (PARTITION BY order_id, campaign_id) AS conflict_dup_count
-    FROM cleaned
+dedup_exact AS (
+    SELECT *
+    FROM (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                -- STRICT DEDUPLICATION: Partition by the Composite Key
+                PARTITION BY campaign_id, order_id
+                ORDER BY ingestion_date DESC
+            ) AS exact_dup_rank
+        FROM cleaned
+    ) t
+    WHERE exact_dup_rank = 1
 )
-
 SELECT
     campaign_id,
     order_id,
@@ -54,12 +54,9 @@ SELECT
     estimated_arrival,
     availed,
     source_filename,
-    ingestion_date,
+    ingestion_date
+FROM dedup_exact;
 
-    CASE 
-        WHEN conflict_dup_count > 1 THEN TRUE
-        ELSE FALSE
-    END AS is_duplicate
- 
-FROM ranked
-WHERE row_num = 1;
+-- Check cleaned view
+-- SELECT count(*) FROM staging.stg_campaign_transactions;
+-- SELECT count(*) FROM staging.clean_stg_campaign_transactions;
