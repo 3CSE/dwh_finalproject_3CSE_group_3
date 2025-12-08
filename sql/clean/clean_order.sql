@@ -42,10 +42,10 @@ dedup_exact AS (
     WHERE exact_dup_rank = 1
 ),
 
-dup_flag AS (
+dup_count AS (
     SELECT
         *,
-        COUNT(*) OVER (PARTITION BY order_id) AS dup_count
+        COUNT(*) OVER (PARTITION BY order_id) AS dup_count_value
     FROM dedup_exact
 )
 SELECT
