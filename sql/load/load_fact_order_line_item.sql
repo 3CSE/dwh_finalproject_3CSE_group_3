@@ -1,32 +1,57 @@
 -- Load Script: Load FactOrderLineItem
--- Strategy: Match items by (order_id, product_id) and perform an Upsert.
--- Note: Assumes staging views (view_clean_line_items_products and view_clean_line_items_prices) 
--- can be joined or aggregated to produce a single, unique line item record identified by (order_id, product_id).
+-- Strategy: Use Positional Matching (ROW_NUMBER) with a LEFT JOIN to prioritize Product IDs.
+-- NOTE: Due to source system constraints (product_id missing in prices view), 
+-- we LEFT JOIN products to prices based on (order_id, position) to ensure we keep all product references.
 
-WITH line_items_combined AS (
-    -- Step 1: Combine product data and price data. 
-    -- We assume the cleaning/joining step (not shown here) ensures that for a given order_id, 
-    -- the product_id accurately links to its corresponding price/quantity.
+WITH products_ranked AS (
+    -- Rank products within each order_id to enable positional joining (the driver set)
     SELECT
-        pp.order_id,
-        pp.product_id,
-        pp.product_name,
+        order_id,
+        product_id,
+        product_name,
+        -- Use consistent ordering to ensure reproducible results for the positional key
+        ROW_NUMBER() OVER (
+            PARTITION BY order_id
+            ORDER BY product_id, product_name
+        ) AS product_seq
+    FROM staging.view_clean_line_items_products
+    WHERE order_id IS NOT NULL
+      AND product_id IS NOT NULL
+),
+prices_ranked AS (
+    -- Rank prices/quantities within each order_id (the optional set)
+    SELECT
+        order_id,
+        price AS unit_price,
+        quantity,
+        line_total_amount,
+        -- Use a deterministic ordering for positional matching
+        ROW_NUMBER() OVER (
+            PARTITION BY order_id
+            ORDER BY price DESC, quantity DESC 
+        ) AS price_seq
+    FROM staging.view_clean_line_items_prices
+    WHERE order_id IS NOT NULL
+      AND quantity IS NOT NULL
+      AND quantity > 0
+),
+line_items_combined AS (
+    -- Step 1: LEFT JOIN to keep ALL products and assign prices where available using position.
+    SELECT
+        pr.order_id,
+        pr.product_id,
+        pr.product_name,
         lp.unit_price,
         lp.quantity,
         lp.line_total_amount
-    FROM staging.view_clean_line_items_products pp
-    INNER JOIN staging.view_clean_line_items_prices lp
-        -- The join should now happen on the unique identifiers available in both source views.
-        -- Assuming product_id has been correctly propagated to the price view/data structure.
-        ON pp.order_id = lp.order_id AND pp.product_id = lp.product_id
-    WHERE pp.order_id IS NOT NULL
-      AND pp.product_id IS NOT NULL
-      AND lp.quantity IS NOT NULL
-      AND lp.quantity > 0
+    FROM products_ranked pr
+    -- LEFT JOIN is CRITICAL here to keep all products
+    LEFT JOIN prices_ranked lp
+        ON pr.order_id = lp.order_id
+        AND pr.product_seq = lp.price_seq
 ),
 final_line_items AS (
-    -- Step 2: Deduplicate in case of residual duplicates in the combined source
-    -- We take the latest/most recent price data if duplicates still exist
+    -- Step 2: Final deduplication and selection of the best record
     SELECT
         order_id,
         product_id,
@@ -38,11 +63,14 @@ final_line_items AS (
             *,
             ROW_NUMBER() OVER (
                 PARTITION BY order_id, product_id
-                ORDER BY unit_price DESC, quantity DESC -- Arbitrary tie-breaker for duplicates
+                -- Arbitrary tie-breaker if duplicates somehow remain
+                ORDER BY unit_price DESC NULLS LAST, quantity DESC NULLS LAST 
             ) AS rn
         FROM line_items_combined
     ) AS t
     WHERE rn = 1
+    -- Filter out line items where we couldn't match a price OR quantity, as they cannot form a valid fact record.
+    AND quantity IS NOT NULL
 )
 
 -- Step 3: Insert into FactOrderLineItem using the Surrogate Key (product_key)
