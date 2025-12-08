@@ -4,7 +4,6 @@ Generates a deterministic Business Key using user_id, name, birthdate, gender, a
 This business key is propagated and consumed by downstream cleaning views: clean_user_data, clean_user_job, and clean_user_credit_card 
 */
 
-DROP VIEW IF EXISTS staging.user_identity_lookup CASCADE;
 CREATE OR REPLACE VIEW staging.user_identity_lookup AS
 WITH identity_source AS (
     SELECT
@@ -19,7 +18,7 @@ WITH identity_source AS (
 cleaned_identity AS (
     SELECT
         TRIM(user_id) AS user_id,
-        COALESCE(INITCAP(TRIM(name)), 'Unknown') AS name,
+        COALESCE(NULLIF(NULLIF(INITCAP(TRIM(name)), 'Nan'), ''), 'Unknown') AS name,
         COALESCE(TO_CHAR(birthdate, 'YYYY-MM-DD HH24:MI:SS'), '') AS birthdate,
         LOWER(TRIM(gender)) AS gender,
         COALESCE(TO_CHAR(creation_date, 'YYYY-MM-DD HH24:MI:SS'), '') AS creation_date,
