@@ -1,6 +1,5 @@
--- View: Clean Product Dimension
+-- View: Clean Product List
 -- Source Table: staging.stg_product_list
--- Lookup View: staging.product_identity_lookup
 
 CREATE OR REPLACE VIEW staging.view_clean_product_list AS
 WITH source_data AS (
@@ -11,7 +10,7 @@ WITH source_data AS (
         price,
         source_filename,
         ingestion_date
-    FROM staging.stg_product_list
+    FROM staging.stg_product_list 
 ),
 cleaned AS (
     SELECT
@@ -35,7 +34,6 @@ cleaned AS (
         ) AS product_name,
 
         INITCAP(REPLACE(TRIM(product_type), '_', ' ')) AS product_type,
-
         CASE
             WHEN COALESCE(price, 0.00) < 0 THEN 0.00
             ELSE COALESCE(price, 0.00)
@@ -44,43 +42,37 @@ cleaned AS (
         source_filename,
         ingestion_date
     FROM source_data
-    WHERE product_id IS NOT NULL AND TRIM(product_id) != '' 
+    WHERE product_id IS NOT NULL 
+      AND TRIM(product_id) != '' 
+      AND TRIM(UPPER(product_id)) NOT IN ('N/A', 'NA', 'UNKNOWN', 'NULL', 'INVALID', 'NOT APPLICABLE')
 ),
-with_bk AS (
-    SELECT
-        c.*,
-        lookup.product_bk -- Attach the stable Business Key
-    FROM cleaned c
-    INNER JOIN staging.product_identity_lookup lookup
-        ON c.product_id = lookup.product_id
-        AND LOWER(c.product_name) = lookup.product_name 
-        AND LOWER(c.product_type) = lookup.product_type 
-),
-
-hashed AS (
+with_bk_and_hash AS (
+    -- CTE 3: Generate the Business Key (product_bk) and the SCD Type 2 Change Detection Hash
     SELECT
         *,
-
+        MD5(product_id) AS product_bk,
+        
         MD5(
+            COALESCE(product_name, '') ||
+            COALESCE(product_type, '') ||
             COALESCE(CAST(price AS TEXT), '')
         ) AS product_attribute_hash
-    FROM with_bk
+    FROM cleaned
 ),
 ranked AS (
 
     SELECT
         *,
         ROW_NUMBER() OVER (
-            PARTITION BY 
-                product_id, product_name, product_type, price, product_bk, product_attribute_hash, source_filename, ingestion_date
+            PARTITION BY product_id
             ORDER BY 
-                ingestion_date DESC 
+                ingestion_date DESC,
+                source_filename DESC
         ) AS row_num
         
-
-    FROM hashed
+    FROM with_bk_and_hash
 )
--- Final SELECT: Filter to the latest exact match and include the new keys
+
 SELECT
     product_id,
     product_bk,
