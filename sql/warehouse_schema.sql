@@ -14,7 +14,11 @@ CREATE TABLE warehouse.DimProduct (
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT UNIQUE,
+    merchant_bk TEXT NOT NULL,
+    merchant_id TEXT,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
     name TEXT,
     contact_number TEXT,
     street TEXT,
