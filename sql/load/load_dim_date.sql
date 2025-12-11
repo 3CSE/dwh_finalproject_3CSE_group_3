@@ -1,40 +1,40 @@
+-- Load to DimDate
+ 
 WITH 
--- Determine overall min and max date across all staging tables
+-- Determine current min and max dates from staging sources
 date_ranges AS (
-    SELECT MIN(d) AS min_date, MAX(d) AS max_date
+    SELECT 
+        MIN(d) AS min_date, 
+        MAX(d) AS max_date
     FROM (
         -- Orders transaction_date
         SELECT MIN(transaction_date)::DATE AS d FROM staging.stg_orders
         UNION ALL
         SELECT MAX(transaction_date)::DATE AS d FROM staging.stg_orders
 
-        -- Orders estimated_arrival ("10days" format)
+        -- Orders estimated_arrival
         UNION ALL
-        SELECT MIN(
-            transaction_date::DATE
-            + COALESCE(REGEXP_REPLACE(LOWER(TRIM(estimated_arrival)), '[^0-9]', '', 'g')::INT, 0) * INTERVAL '1 day'
-        ) AS d
+        SELECT MIN(transaction_date::DATE 
+                   + COALESCE(REGEXP_REPLACE(LOWER(TRIM(estimated_arrival)), '[^0-9]', '', 'g')::INT, 0) * INTERVAL '1 day') 
         FROM staging.stg_orders
         UNION ALL
-        SELECT MAX(
-            transaction_date::DATE
-            + COALESCE(REGEXP_REPLACE(LOWER(TRIM(estimated_arrival)), '[^0-9]', '', 'g')::INT, 0) * INTERVAL '1 day'
-        ) AS d
+        SELECT MAX(transaction_date::DATE 
+                   + COALESCE(REGEXP_REPLACE(LOWER(TRIM(estimated_arrival)), '[^0-9]', '', 'g')::INT, 0) * INTERVAL '1 day') 
         FROM staging.stg_orders
 
-        -- User creation dates
+        -- User creation_date
         UNION ALL
         SELECT MIN(creation_date)::DATE FROM staging.stg_user_data
         UNION ALL
         SELECT MAX(creation_date)::DATE FROM staging.stg_user_data
 
-        -- Merchant creation dates
+        -- Merchant creation_date
         UNION ALL
         SELECT MIN(creation_date)::DATE FROM staging.stg_merchant_data
         UNION ALL
         SELECT MAX(creation_date)::DATE FROM staging.stg_merchant_data
 
-        -- Staff creation dates
+        -- Staff creation_date
         UNION ALL
         SELECT MIN(creation_date)::DATE FROM staging.stg_staff
         UNION ALL
@@ -48,13 +48,16 @@ date_ranges AS (
     ) AS all_dates
 ),
 
--- Generate continuous date series
+-- Generate continuous date series from min_date to max_date + 1 year buffer
 date_series AS (
-    SELECT generate_series(min_date, max_date, interval '1 day')::DATE AS full_date
-    FROM date_ranges
+    SELECT generate_series(
+        (SELECT min_date FROM date_ranges),
+        (SELECT max_date FROM date_ranges) + INTERVAL '365 days',
+        INTERVAL '1 day'
+    )::DATE AS full_date
 )
 
--- Transform date attributes and load into DimDate
+-- Transform into DimDate structure
 INSERT INTO warehouse.DimDate (
     date_key,
     full_date,
@@ -73,10 +76,10 @@ SELECT
     EXTRACT(YEAR FROM full_date)::INT AS year,
     TO_CHAR(full_date, 'Month') AS month_name,
     EXTRACT(QUARTER FROM full_date)::INT AS quarter,
-    EXTRACT(ISODOW FROM full_date)::INT AS day_of_week  -- 1=Mon, 7=Sun
+    EXTRACT(ISODOW FROM full_date)::INT AS day_of_week  -- 1=Monday, 7=Sunday
 FROM date_series
-ON CONFLICT (date_key)
-DO NOTHING;  -- safe reload, skip duplicates
+ON CONFLICT (date_key) 
+DO NOTHING;  -- Skip already existing dates
 
 -- Optional: verify loaded data
 -- SELECT COUNT(*) AS total_dates FROM warehouse.DimDate;

@@ -2,15 +2,10 @@
 CREATE OR REPLACE VIEW staging.clean_stg_orders AS
 WITH source_data AS (
     SELECT
-        order_id,
-        user_id,
-        estimated_arrival,
-        transaction_date,
-        source_filename,
-        ingestion_date
+        order_id, user_id, estimated_arrival, transaction_date,
+        source_filename, ingestion_date
     FROM staging.stg_orders
 ),
--- Clean and standardize
 cleaned AS (
     SELECT
         TRIM(order_id) AS order_id,
@@ -34,19 +29,12 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY order_id, user_id, estimated_arrival, transaction_date
+                PARTITION BY order_id 
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned
     ) t
     WHERE exact_dup_rank = 1
-),
-
-dup_flag AS (
-    SELECT
-        *,
-        COUNT(*) OVER (PARTITION BY order_id) AS dup_count
-    FROM dedup_exact
 )
 SELECT
     order_id,
@@ -54,9 +42,8 @@ SELECT
     estimated_arrival,
     transaction_date,
     source_filename,
-    ingestion_date,
-    (dup_count > 1) AS is_duplicate
-FROM dup_flag;
+    ingestion_date
+FROM dedup_exact;
 
 
 -- Test the view

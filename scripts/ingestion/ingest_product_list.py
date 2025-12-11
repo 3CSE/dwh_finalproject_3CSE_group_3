@@ -11,7 +11,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Directory containing product list files
-DATA_DIR = "/app/dataset/business_department"
+DATA_DIR = "/opt/airflow/dataset/business_department"
 
 # Table and required columns
 TABLE_NAME = "staging.stg_product_list"

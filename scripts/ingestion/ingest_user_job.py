@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 
 # Folder containing the source files
-DATA_DIR = "/app/dataset/customer_management_department"
+DATA_DIR = "/opt/airflow/dataset/customer_management_department"
 
 # Target table and required columns
 TABLE_NAME = "staging.stg_user_job"
