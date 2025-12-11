@@ -58,10 +58,7 @@ metrics AS (
         order_id,
         SUM(quantity) AS total_items,
         SUM(line_total_amount) AS raw_order_total
-    FROM (
-        SELECT DISTINCT order_id, price, quantity, line_total_amount 
-        FROM staging.view_clean_line_items_prices
-    ) unique_lines
+    FROM staging.view_clean_line_items_prices
     GROUP BY order_id
 )
 
@@ -125,9 +122,9 @@ FROM orders o
 LEFT JOIN bridge b ON o.order_id = b.order_id
 LEFT JOIN campaigns c ON o.order_id = c.order_id
 LEFT JOIN delays d ON o.order_id = d.order_id
-LEFT JOIN metrics m ON o.order_id = m.order_id
+INNER JOIN metrics m ON o.order_id = m.order_id
 
--- JOINS
+-- Joins to dimensions
 LEFT JOIN warehouse.DimCustomer cust 
     ON o.user_id = cust.user_id 
     AND o.transaction_date >= cust.effective_date 
@@ -173,7 +170,7 @@ DO UPDATE SET
 -- select count(*) from warehouse.dimproduct;
 -- select count(*) from warehouse.dimstaff;
 
--- select * from warehouse.factorder where staff_key = -1 limit 10;
+-- select * from warehouse.factorder limit 10;
 
 -- truncate table warehouse.factorder;
 
@@ -225,5 +222,5 @@ VALUES (
     -1, 'UNKNOWN', 'Unknown Campaign', 'Unknown', 0
 )
 ON CONFLICT (campaign_key) DO NOTHING;
-
 */
+------------------------------
