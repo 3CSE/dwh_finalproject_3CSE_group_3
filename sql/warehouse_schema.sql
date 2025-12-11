@@ -141,6 +141,5 @@ CREATE TABLE warehouse.FactOrderLineItem (
     unit_price NUMERIC(18,2),
     line_total_amount NUMERIC(18,2), 
     CONSTRAINT fk_lineitem_product
-    FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key),
-    UNIQUE (order_id, product_key)
+    FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key)
 );
