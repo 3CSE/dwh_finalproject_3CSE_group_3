@@ -97,3 +97,14 @@ WHERE
 
 -- check loaded data
 -- select count(*) from warehouse.DimStaff;
+
+-- Ensure Unknown Members Exists
+INSERT INTO warehouse.DimStaff (
+    staff_key, staff_bk, staff_id, name, 
+    is_current, effective_date, end_date, staff_attribute_hash
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'UNKNOWN', 'Unknown Staff', TRUE, '1900-01-01', NULL, MD5('UNKNOWN')
+)
+ON CONFLICT (staff_key) DO NOTHING;

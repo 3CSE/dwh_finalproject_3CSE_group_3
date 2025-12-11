@@ -76,3 +76,13 @@ WHERE
 -- Check data loaded
 -- SELECT * FROM warehouse.DimMerchant LIMIT 10;
 
+-- Ensure Unknown member exists
+INSERT INTO warehouse.DimMerchant (
+    merchant_key, merchant_bk, merchant_id, name, 
+    is_current, effective_date, end_date
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'UNKNOWN', 'Unknown Merchant', TRUE, '1900-01-01', NULL
+)
+ON CONFLICT (merchant_key) DO NOTHING;

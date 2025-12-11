@@ -84,3 +84,14 @@ WHERE
 -- Test the DimCustomer table
 -- select count(*) from warehouse.DimCustomer;
 -- select * from warehouse.DimCustomer limit 10;
+
+-- ensure unknown member exist
+INSERT INTO warehouse.DimCustomer (
+    customer_key, user_bk, user_id, name, 
+    is_current, effective_date, end_date
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'UNKNOWN', 'Unknown Customer', TRUE, '1900-01-01', NULL
+)
+ON CONFLICT (customer_key) DO NOTHING;

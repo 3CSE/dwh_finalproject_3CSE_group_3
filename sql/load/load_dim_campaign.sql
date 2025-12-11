@@ -24,3 +24,13 @@ DO UPDATE SET
 
 -- check loaded data
 -- select count(*) from warehouse.DimCampaign;
+
+-- ensure unknown member exists
+INSERT INTO warehouse.DimCampaign (
+    campaign_key, campaign_id, campaign_name, campaign_description, discount_value
+)
+OVERRIDING SYSTEM VALUE
+VALUES (
+    -1, 'UNKNOWN', 'Unknown Campaign', 'Unknown', 0
+)
+ON CONFLICT (campaign_key) DO NOTHING;
