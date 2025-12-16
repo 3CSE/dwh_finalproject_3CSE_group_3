@@ -1,5 +1,5 @@
 -- Load Script: Load DimCampaign
--- Source View: staging.view_clean_campaign
+-- Source View: staging.clean_stg_campaign
 -- SCD Type 1 loading script for DimCampaign
 
 INSERT INTO warehouse.DimCampaign (

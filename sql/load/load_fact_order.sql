@@ -1,9 +1,9 @@
 -- Load Script: Load FactOrder
 -- Source Views: 
 --   - staging.clean_stg_orders (order_id, user_id, transaction_date, estimated_arrival)
---   - staging.view_clean_order_merchant (order_id, merchant_id, staff_id)
+--   - staging.clean_stg_order_merchant (order_id, merchant_id, staff_id)
 --   - staging.clean_stg_order_delays (order_id, delay_in_days)
---   - staging.view_clean_campaign_transactions (order_id, campaign_id, availed)
+--   - staging.clean_stg_campaign_transactions (order_id, campaign_id, availed)
 -- Strategy: Join all order-related views, resolve dimension keys, calculate metrics
 
 WITH 
@@ -58,7 +58,7 @@ metrics AS (
         order_id,
         SUM(quantity) AS total_items,
         SUM(line_total_amount) AS raw_order_total
-    FROM staging.view_clean_line_items_prices
+    FROM staging.clean_stg_line_items_prices
     GROUP BY order_id
 )
 

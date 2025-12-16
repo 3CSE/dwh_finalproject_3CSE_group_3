@@ -6,7 +6,7 @@ BEGIN;
 DELETE FROM warehouse.FactOrderLineItem 
 WHERE order_id IN (
     SELECT DISTINCT order_id 
-    FROM staging.view_clean_line_items_products
+    FROM staging.clean_stg_line_items_products
     WHERE order_id IS NOT NULL
 );
 
@@ -16,7 +16,7 @@ WITH products_ranked AS (
         product_id,
         product_name,
         line_item_seq 
-    FROM staging.view_clean_line_items_products
+    FROM staging.clean_stg_line_items_products
     WHERE order_id IS NOT NULL AND product_id IS NOT NULL
 ),
 prices_ranked AS (
@@ -26,7 +26,7 @@ prices_ranked AS (
         quantity,
         line_total_amount,
         line_item_seq 
-    FROM staging.view_clean_line_items_prices
+    FROM staging.clean_stg_line_items_prices
     WHERE order_id IS NOT NULL AND quantity > 0
 ),
 line_items_combined AS (
