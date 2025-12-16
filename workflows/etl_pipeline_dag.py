@@ -43,7 +43,7 @@ with DAG(
     tags=["ETL", "safe"]
 ) as dag:
 
-    # Stage 1: parallel
+    # Stage 1: 
     db_conn = create_task_safe("scripts/database_connection.py")
     file_load = create_task_safe("scripts/file_loader.py")
 

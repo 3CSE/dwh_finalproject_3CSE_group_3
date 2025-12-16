@@ -74,6 +74,8 @@ services:
       - ./dataset:/opt/airflow/dataset
       - ./workflows:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - ./sql:/opt/airflow/sql
+
     command: airflow scheduler
 
 volumes:
