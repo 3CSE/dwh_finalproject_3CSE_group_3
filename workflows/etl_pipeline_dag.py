@@ -64,7 +64,80 @@ with DAG(
                 script_path = os.path.join(ingestion_folder, f)
                 ingestion_tasks.append(create_task_safe(script_path))
 
-    # Stage 2 → Stage 3
+    # Stage 4: Data Cleaning (auto-discover)
+    cleaning_folder = "scripts/cleaning"
+    lookup_tasks = []
+    other_cleaning_tasks = []
+    
+    if os.path.exists(cleaning_folder):
+        for f in sorted(os.listdir(cleaning_folder)):
+            if f.endswith(".py") and (f.startswith("clean_") or "lookup_view" in f):
+                script_path = os.path.join(cleaning_folder, f)
+                task = create_task_safe(script_path)
+                
+                # Separate lookups from other cleaning scripts
+                if "lookup_view" in f:
+                    lookup_tasks.append(task)
+                else:
+                    other_cleaning_tasks.append(task)
+
+    # Stage 5: loading scripts (auto-discover and separate dimensions from facts)
+    loading_folder = "scripts/loading"
+    dimension_tasks = []
+    fact_order_line_item_task = None
+    fact_order_task = None
+    
+    if os.path.exists(loading_folder):
+        for f in sorted(os.listdir(loading_folder)):
+            if f.endswith(".py") and f.startswith("load_"):
+                script_path = os.path.join(loading_folder, f)
+                task = create_task_safe(script_path)
+                
+                # Separate dimensions from facts
+                if "dim_" in f.lower():
+                    dimension_tasks.append(task)
+                elif "fact_order_line_item" in f.lower():
+                    fact_order_line_item_task = task
+                elif "fact_order" in f.lower():
+                    fact_order_task = task
+
+    # Task Dependencies
+    
+    # Ingestion Trigger
     if ingestion_tasks:
         for task in ingestion_tasks:
             universal_ingest >> task
+    
+    # 1. Lookups run first (after ingestion)
+    if ingestion_tasks and lookup_tasks:
+        for ing_task in ingestion_tasks:
+            for lookup_task in lookup_tasks:
+                ing_task >> lookup_task
+    elif lookup_tasks:
+        for lookup_task in lookup_tasks:
+            universal_ingest >> lookup_task
+
+    # 2. Other cleaning tasks run AFTER lookups
+    if lookup_tasks and other_cleaning_tasks:
+        for lookup_task in lookup_tasks:
+            for clean_task in other_cleaning_tasks:
+                lookup_task >> clean_task
+    elif ingestion_tasks and other_cleaning_tasks: # Fallback if no lookups
+        for ing_task in ingestion_tasks:
+            for clean_task in other_cleaning_tasks:
+                ing_task >> clean_task
+                
+    # 3. Dimensions run AFTER cleaning
+    if other_cleaning_tasks and dimension_tasks:
+        for clean_task in other_cleaning_tasks:
+            for dim_task in dimension_tasks:
+                clean_task >> dim_task
+    
+    # 4. FactOrderLineItem runs AFTER Dimensions
+    if dimension_tasks and fact_order_line_item_task:
+        for dim_task in dimension_tasks:
+            dim_task >> fact_order_line_item_task
+            
+    # 5. FactOrder runs AFTER FactOrderLineItem (as requested)
+    if fact_order_line_item_task and fact_order_task:
+        fact_order_line_item_task >> fact_order_task
