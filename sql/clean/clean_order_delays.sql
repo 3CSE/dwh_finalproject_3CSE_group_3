@@ -27,28 +27,20 @@ dedup_exact AS (
         SELECT
             *,
             ROW_NUMBER() OVER (
-                PARTITION BY order_id, delay_in_days
+                PARTITION BY order_id 
                 ORDER BY ingestion_date DESC
             ) AS exact_dup_rank
         FROM cleaned
     ) t
     WHERE exact_dup_rank = 1
-),
-
-dup_flag AS (
-    SELECT
-        *,
-        COUNT(*) OVER (PARTITION BY order_id) AS dup_count
-    FROM dedup_exact
 )
 
 SELECT
     order_id,
     delay_in_days,
     source_filename,
-    ingestion_date,
-    (dup_count > 1) AS is_duplicate
-FROM dup_flag;
+    ingestion_date
+FROM dedup_exact;
 
 -- Test the view
 -- Check count

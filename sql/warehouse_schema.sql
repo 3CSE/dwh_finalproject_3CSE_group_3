@@ -1,20 +1,27 @@
 CREATE SCHEMA IF NOT EXISTS warehouse;
 
--- DimProduct
 DROP TABLE IF EXISTS warehouse.DimProduct;
 CREATE TABLE warehouse.DimProduct (
     product_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    product_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
     product_id TEXT,
     product_name TEXT,
     product_type TEXT,
-    price NUMERIC(18,2)
+    price NUMERIC(18,2),
+    product_attribute_hash TEXT
 );
 
--- DimMerchant
 DROP TABLE IF EXISTS warehouse.DimMerchant;
 CREATE TABLE warehouse.DimMerchant (
     merchant_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    merchant_id TEXT UNIQUE,
+    merchant_bk TEXT NOT NULL,
+    merchant_id TEXT,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
     name TEXT,
     contact_number TEXT,
     street TEXT,
@@ -24,11 +31,14 @@ CREATE TABLE warehouse.DimMerchant (
     creation_date TIMESTAMP
 );
 
--- DimStaff
 DROP TABLE IF EXISTS warehouse.DimStaff;
 CREATE TABLE warehouse.DimStaff (
     staff_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    staff_id TEXT UNIQUE,
+    staff_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
+    staff_id TEXT,
     name TEXT,
     job_level TEXT,
     street TEXT,
@@ -36,14 +46,18 @@ CREATE TABLE warehouse.DimStaff (
     state TEXT,
     country TEXT,
     contact_number TEXT,
-    creation_date TIMESTAMP
+    creation_date TIMESTAMP,
+    staff_attribute_hash TEXT
 );
 
--- DimCustomer
 DROP TABLE IF EXISTS warehouse.DimCustomer;
 CREATE TABLE warehouse.DimCustomer (
     customer_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT UNIQUE,
+    user_bk TEXT NOT NULL,
+    is_current BOOLEAN DEFAULT TRUE,
+    effective_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,
+    user_id TEXT,
     name TEXT,
     gender TEXT,
     birthdate TIMESTAMP,
@@ -60,17 +74,15 @@ CREATE TABLE warehouse.DimCustomer (
     issuing_bank TEXT
 );
 
--- DimCampaign
 DROP TABLE IF EXISTS warehouse.DimCampaign;
 CREATE TABLE warehouse.DimCampaign (
     campaign_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    campaign_id TEXT,
+    campaign_id TEXT UNIQUE,
     campaign_name TEXT,
     campaign_description TEXT,
     discount_value NUMERIC(18,2)
 );
 
--- DimDate
 DROP TABLE IF EXISTS warehouse.DimDate;
 CREATE TABLE warehouse.DimDate (
     date_key INT PRIMARY KEY,
@@ -83,17 +95,20 @@ CREATE TABLE warehouse.DimDate (
     day_of_week INT
 );
 
--- FactOrder
 DROP TABLE IF EXISTS warehouse.FactOrder;
 CREATE TABLE warehouse.FactOrder (
+    -- natural key
     order_id TEXT PRIMARY KEY,
+    -- foreign keys (SK from dimensions)
     customer_key INT,
     merchant_key INT,
     staff_key INT,
+    campaign_key INT,
+    -- Date keys
     transaction_date_key INT,
     estimated_arrival_date_key INT,
     actual_arrival_date_key INT,
-    campaign_key INT,
+    -- Facts/Metrics
     availed_flag BOOLEAN,
     order_total_amount NUMERIC(18,2),
     discount_amount NUMERIC(18,2),
@@ -101,7 +116,6 @@ CREATE TABLE warehouse.FactOrder (
     number_of_items INT,
     delay_in_days INT,
     
-    -- Foreign Key Constraints
     CONSTRAINT fk_order_customer
         FOREIGN KEY (customer_key) REFERENCES warehouse.DimCustomer(customer_key),
     CONSTRAINT fk_order_merchant
@@ -118,7 +132,6 @@ CREATE TABLE warehouse.FactOrder (
         FOREIGN KEY (actual_arrival_date_key) REFERENCES warehouse.DimDate(date_key)
 );
 
---FactOrderLineItem
 DROP TABLE IF EXISTS warehouse.FactOrderLineItem;
 CREATE TABLE warehouse.FactOrderLineItem (
     line_item_key INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -128,6 +141,5 @@ CREATE TABLE warehouse.FactOrderLineItem (
     unit_price NUMERIC(18,2),
     line_total_amount NUMERIC(18,2), 
     CONSTRAINT fk_lineitem_product
-    FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key),
-    UNIQUE (order_id, product_key)
+    FOREIGN KEY (product_key) REFERENCES warehouse.DimProduct(product_key)
 );

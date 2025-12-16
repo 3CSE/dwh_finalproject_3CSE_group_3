@@ -1,5 +1,15 @@
 import logging
+<<<<<<< HEAD
 from database_connection import get_connection
+=======
+import os
+import sys
+
+# Add the scripts directory to the python path so we can import database_connection
+sys.path.append('/opt/airflow/scripts')
+
+from execute_sql_file import execute_sql_file
+>>>>>>> a1498287bf57e57ec34a73e6561a3d2427cb5481
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -7,6 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 SQL_FILE = "/opt/airflow/sql/load/load_fact_order.sql"
 
 def run_loading():
+<<<<<<< HEAD
     """Execute the load_fact_order.sql loading script"""
     conn = get_connection()
     if not conn:
@@ -37,6 +48,20 @@ def run_loading():
     finally:
         if conn:
             conn.close()
+=======
+    """Execute the load_fact_order.sql load script"""
+    try:
+        success = execute_sql_file(SQL_FILE)
+        if success:
+            logging.info("Successfully executed: load_fact_order.sql")
+        else:
+            logging.error(f"Failed to execute load_fact_order.sql")
+            sys.exit(1)
+            
+    except Exception as e:
+        logging.error(f"Error executing load_fact_order.sql: {str(e)}")
+        sys.exit(1)
+>>>>>>> a1498287bf57e57ec34a73e6561a3d2427cb5481
 
 if __name__ == "__main__":
     run_loading()
