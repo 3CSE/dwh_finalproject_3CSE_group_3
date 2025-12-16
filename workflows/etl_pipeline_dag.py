@@ -23,8 +23,10 @@ def run_script_safe(script_path):
         except subprocess.CalledProcessError as e:
             logging.error(f"Error running {script_path}: {e}")
             logging.error(e.stdout if e.stdout else "No output captured")
+            raise
     else:
         logging.error(f"Script not found: {script_path}")
+        raise FileNotFoundError(f"Script not found: {script_path}")
 
 def create_task_safe(script_path):
     task_id = os.path.splitext(os.path.basename(script_path))[0]
@@ -55,7 +57,7 @@ with DAG(
     db_conn >> file_discover
     file_load >> file_discover
 
-    # Stage 3: ingestion scripts
+    # Stage 3: ingestion scripts (auto-discover)
     ingestion_folder = "scripts/ingestion"
     ingestion_tasks = []
     if os.path.exists(ingestion_folder):
@@ -68,3 +70,50 @@ with DAG(
     if ingestion_tasks:
         for task in ingestion_tasks:
             universal_ingest >> task
+
+    # Stage 4: cleaning scripts (auto-discover)
+    cleaning_folder = "scripts/cleaning"
+    cleaning_tasks = []
+    if os.path.exists(cleaning_folder):
+        for f in sorted(os.listdir(cleaning_folder)):
+            if f.endswith(".py") and f.startswith("clean_"):
+                script_path = os.path.join(cleaning_folder, f)
+                cleaning_tasks.append(create_task_safe(script_path))
+
+    # Stage 5: loading scripts (auto-discover and separate dimensions from facts)
+    loading_folder = "scripts/loading"
+    dimension_tasks = []
+    fact_tasks = []
+    
+    if os.path.exists(loading_folder):
+        for f in sorted(os.listdir(loading_folder)):
+            if f.endswith(".py") and f.startswith("load_"):
+                script_path = os.path.join(loading_folder, f)
+                task = create_task_safe(script_path)
+                
+                # Separate dimensions from facts
+                if "dim_" in f.lower():
+                    dimension_tasks.append(task)
+                elif "fact_" in f.lower():
+                    fact_tasks.append(task)
+
+    # Stage 3 → Stage 4 (Cleaning - all in parallel)
+    if ingestion_tasks and cleaning_tasks:
+        for ing_task in ingestion_tasks:
+            for clean_task in cleaning_tasks:
+                ing_task >> clean_task
+    elif cleaning_tasks:
+        for clean_task in cleaning_tasks:
+            universal_ingest >> clean_task
+
+    # Stage 4 → Stage 5a (Dimensions - all in parallel)
+    if cleaning_tasks and dimension_tasks:
+        for clean_task in cleaning_tasks:
+            for dim_task in dimension_tasks:
+                clean_task >> dim_task
+    
+    # Stage 5a → Stage 5b (Facts - after ALL dimensions complete)
+    if dimension_tasks and fact_tasks:
+        for dim_task in dimension_tasks:
+            for fact_task in fact_tasks:
+                dim_task >> fact_task
