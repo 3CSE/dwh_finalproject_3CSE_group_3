@@ -12,7 +12,7 @@ WITH source_data AS (
             COALESCE(product_type, '') ||
             COALESCE(CAST(price AS TEXT), '')
         ) AS product_attribute_hash
-    FROM staging.view_clean_product_list
+    FROM staging.clean_stg_product_list
 ),
 
 latest_source_record AS (

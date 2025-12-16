@@ -21,7 +21,7 @@ WITH source_data AS (
             COALESCE(country, '') ||
             COALESCE(contact_number, '')
         ) AS staff_attribute_hash
-    FROM staging.view_clean_staff
+    FROM staging.clean_stg_staff
 ),
 
 latest_source_record AS (
