@@ -69,4 +69,4 @@ FROM dedup_exact;
 
 -- Check cleaned view
 -- SELECT * FROM staging.stg_campaign;
--- SELECT * FROM staging.view_clean_campaign;
+-- SELECT * FROM staging.clean_stg_campaign;

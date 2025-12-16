@@ -2,7 +2,7 @@
 -- Source Table: staging.stg_line_items_prices
 -- Target Usage: Provides pricing and quantity metrics for FactOrderLineItem
 
-CREATE OR REPLACE VIEW staging.view_clean_line_items_prices AS
+CREATE OR REPLACE VIEW staging.clean_stg_line_items_prices AS
 WITH source_data AS (
     SELECT
         order_id, price, quantity, source_filename, ingestion_date,

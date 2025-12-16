@@ -56,7 +56,7 @@ WITH duplicate AS (
     SELECT *,
     -- Columns used in business key generation
     ROW_NUMBER() OVER (PARTITION BY product_id, product_name, product_type) AS rn
-    FROM staging.view_clean_product_list
+    FROM staging.clean_stg_product_list
 )
 SELECT * FROM duplicate WHERE rn > 1;
 */

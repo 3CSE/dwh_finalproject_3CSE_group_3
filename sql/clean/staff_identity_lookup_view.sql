@@ -51,7 +51,7 @@ WITH duplicate AS (
     SELECT *,
     -- Columns used in business key generation
     ROW_NUMBER() OVER (PARTITION BY staff_id, creation_date) AS rn
-    FROM staging.view_clean_staff
+    FROM staging.clean_stg_staff
 )
 SELECT * FROM duplicate WHERE rn > 1;
 */

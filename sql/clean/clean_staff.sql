@@ -2,7 +2,7 @@
 -- Source Table: staging.stg_staff
 -- Target Usage: Populates warehouse.DimStaff
 
-CREATE OR REPLACE VIEW staging.view_clean_staff AS
+CREATE OR REPLACE VIEW staging.clean_stg_staff AS
 WITH source_data AS (
     SELECT
         staff_id,
@@ -73,8 +73,8 @@ FROM dedup_exact;
 -- Test view
 -- Check counts
 -- SELECT COUNT(*) FROM staging.stg_merchant_data;
--- SELECT COUNT(*) FROM staging.view_clean_staff;
+-- SELECT COUNT(*) FROM staging.clean_stg_staff;
 
 -- Check the cleaned data
--- SELECT * FROM staging.view_clean_staff LIMIT 50;
+-- SELECT * FROM staging.clean_stg_staff LIMIT 50;
 -- SELECT * FROM staging.stg_merchant_data LIMIT 50;

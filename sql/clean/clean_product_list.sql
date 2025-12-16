@@ -1,7 +1,7 @@
 -- View: Clean Product List
 -- Source Table: staging.stg_product_list
 
-CREATE OR REPLACE VIEW staging.view_clean_product_list AS
+CREATE OR REPLACE VIEW staging.clean_stg_product_list AS
 WITH source_data AS (
     SELECT
         product_id,
