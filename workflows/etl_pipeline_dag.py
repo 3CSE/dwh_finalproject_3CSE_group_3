@@ -191,12 +191,39 @@ with DAG(
     # 7. Metabase Refresh - Sync database metadata after ETL
     refresh_metabase_task = create_task_direct("dashboard/scripts/refresh_metabase.py")
     
-    # 8. Create Dashboard - Create main ShopZada Dashboard container
-    create_dashboard_task = create_task_direct("dashboard/scripts/create_dashboard.py")
+    # 8. Create Bulk Dashboards - Create 10 general dashboards
+    create_bulk_dashboards_task = create_task_direct("dashboard/scripts/create_dashboard.py")
     
-    # 9. Build Pages - Add Executive Overview section
-    build_executive_overview_task = create_task_direct("dashboard/scripts/pages/create_executive_overview.py")
+    # 9a. Create Executive Overview Dashboard
+    create_executive_dashboard_task = create_task_direct("dashboard/scripts/pages/create_executive_overview.py")
+    
+    # 9b. Create Campaign Performance Dashboard
+    create_campaign_dashboard_task = create_task_direct("dashboard/scripts/pages/create_campaign_performance.py")
+    
+    # 10a. Create Executive Overview Cards
+    create_executive_cards_task = create_task_direct("dashboard/scripts/cards/executive_overview_cards.py")
+    
+    # 10b. Create Campaign Performance Cards
+    create_campaign_cards_task = create_task_direct("dashboard/scripts/cards/campaign_performance_cards.py")
+    
+    # 11a. Insert Cards into Executive Overview Dashboard
+    insert_executive_cards_task = create_task_direct("dashboard/scripts/insertion/insert_executive_overview.py")
+    
+    # 11b. Insert Cards into Campaign Performance Dashboard
+    insert_campaign_cards_task = create_task_direct("dashboard/scripts/insertion/insert_campaign_performance.py")
     
     # Dashboard tasks run after FactOrder completes
+    # Workflow: setup → refresh → [create dashboards in parallel] → [create cards in parallel] → [insert cards in parallel]
     if fact_order_task:
-        fact_order_task >> setup_metabase_task >> refresh_metabase_task >> create_dashboard_task >> build_executive_overview_task
+        fact_order_task >> setup_metabase_task >> refresh_metabase_task
+        
+        # Dashboard creation runs in parallel
+        refresh_metabase_task >> [create_bulk_dashboards_task, create_executive_dashboard_task, create_campaign_dashboard_task]
+        
+        # Card creation runs in parallel after their respective dashboards are created
+        create_executive_dashboard_task >> create_executive_cards_task
+        create_campaign_dashboard_task >> create_campaign_cards_task
+        
+        # Card insertion runs in parallel after their respective cards are created
+        create_executive_cards_task >> insert_executive_cards_task
+        create_campaign_cards_task >> insert_campaign_cards_task

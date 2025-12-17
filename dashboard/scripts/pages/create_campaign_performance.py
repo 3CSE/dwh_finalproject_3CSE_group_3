@@ -26,7 +26,6 @@ def get_dashboard_by_name(session_token, name):
     response.raise_for_status()
     
     dashboards = response.json()
-    # Handle both list and dict with 'data' key
     if isinstance(dashboards, dict) and 'data' in dashboards:
         dashboards = dashboards['data']
     
@@ -52,36 +51,36 @@ def create_dashboard(session_token, name, description):
     response.raise_for_status()
     return response.json()['id']
 
-def create_shopzada_dashboard():
-    """Create the main ShopZada Dashboard"""
-    logging.info("Creating ShopZada Dashboard...")
+def create_campaign_performance_dashboard():
+    """Create the Campaign Performance Dashboard"""
+    logging.info("Creating Campaign Performance Dashboard...")
     
     # Login
     session_token = login_to_metabase()
     logging.info("✓ Logged in to Metabase")
     
     # Check if dashboard already exists
-    existing_id = get_dashboard_by_name(session_token, "ShopZada Dashboard")
+    existing_id = get_dashboard_by_name(session_token, "Campaign Performance")
     if existing_id:
-        logging.info(f"✓ Dashboard already exists (ID: {existing_id})")
+        logging.info(f"✓ Campaign Performance Dashboard already exists (ID: {existing_id})")
         logging.info(f"View at: {METABASE_URL}/dashboard/{existing_id}")
         return existing_id
     
     # Create new dashboard
     dashboard_id = create_dashboard(
         session_token,
-        "ShopZada Dashboard",
-        "Analytics and insights for ShopZada e-commerce platform"
+        "Campaign Performance",
+        "Campaign effectiveness, ROI, and marketing channel analysis"
     )
     
-    logging.info(f"✅ ShopZada Dashboard created successfully!")
+    logging.info(f"✅ Campaign Performance Dashboard created successfully!")
     logging.info(f"Dashboard ID: {dashboard_id}")
     logging.info(f"View at: {METABASE_URL}/dashboard/{dashboard_id}")
     return dashboard_id
 
 if __name__ == "__main__":
     try:
-        create_shopzada_dashboard()
+        create_campaign_performance_dashboard()
     except Exception as e:
-        logging.error(f"❌ Failed to create dashboard: {e}")
+        logging.error(f"❌ Failed to create Campaign Performance Dashboard: {e}")
         exit(1)
