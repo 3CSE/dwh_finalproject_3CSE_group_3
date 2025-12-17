@@ -74,20 +74,34 @@ def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x
     """Add a card to a dashboard"""
     headers = {'X-Metabase-Session': session_token}
     
-    payload = {
-        "cards": [{
-            "card_id": card_id,
-            "row": row,
-            "col": col,
-            "size_x": size_x,
-            "size_y": size_y
-        }]
+    # Get existing dashboard to get current cards
+    response = requests.get(
+        f'{METABASE_URL}/api/dashboard/{dashboard_id}',
+        headers=headers
+    )
+    response.raise_for_status()
+    dashboard = response.json()
+    
+    # Get existing cards
+    existing_cards = dashboard.get('dashcards', [])
+    
+    # Add new card
+    new_card = {
+        "card_id": card_id,
+        "row": row,
+        "col": col,
+        "size_x": size_x,
+        "size_y": size_y
     }
     
+    # Append to existing cards
+    all_cards = existing_cards + [new_card]
+    
+    # Update dashboard with all cards
     response = requests.put(
         f'{METABASE_URL}/api/dashboard/{dashboard_id}/cards',
         headers=headers,
-        json=payload
+        json={"cards": all_cards}
     )
     response.raise_for_status()
     return response.json()
