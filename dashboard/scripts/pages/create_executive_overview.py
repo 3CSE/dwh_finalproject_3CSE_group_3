@@ -91,6 +91,50 @@ def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x
     response.raise_for_status()
     return response.json()
 
+def create_dashboard_with_cards(session_token, name, description, database_id, questions):
+    """Create a dashboard with all cards in one operation"""
+    headers = {'X-Metabase-Session': session_token}
+    
+    # Create all questions first
+    card_ids = []
+    for q in questions:
+        logging.info(f"Creating question: {q['name']}")
+        card_id = create_question(
+            session_token,
+            database_id,
+            q['name'],
+            q['sql'],
+            q['viz']
+        )
+        card_ids.append((card_id, q['position']))
+    
+    # Create ordered_cards structure
+    ordered_cards = []
+    for idx, (card_id, position) in enumerate(card_ids):
+        ordered_cards.append({
+            "id": idx,
+            "card_id": card_id,
+            "row": position['row'],
+            "col": position['col'],
+            "sizeX": position['size_x'],
+            "sizeY": position['size_y']
+        })
+    
+    # Create dashboard with cards
+    payload = {
+        "name": name,
+        "description": description,
+        "ordered_cards": ordered_cards
+    }
+    
+    response = requests.post(
+        f'{METABASE_URL}/api/dashboard',
+        headers=headers,
+        json=payload
+    )
+    response.raise_for_status()
+    return response.json()['id']
+
 def build_executive_dashboard():
     """Build the Executive Overview dashboard"""
     logging.info("Starting Executive Overview dashboard creation...")
@@ -102,14 +146,6 @@ def build_executive_dashboard():
     # Get database ID
     database_id = get_database_id(session_token)
     logging.info(f"✓ Found database ID: {database_id}")
-    
-    # Create dashboard
-    dashboard_id = create_dashboard(
-        session_token,
-        "Executive Overview",
-        "Key performance metrics and trends for ShopZada"
-    )
-    logging.info(f"✓ Created dashboard ID: {dashboard_id}")
     
     # Define all questions with their SQL
     questions = [
@@ -226,28 +262,14 @@ LIMIT 5""",
         }
     ]
     
-    # Create each question and add to dashboard
-    for q in questions:
-        logging.info(f"Creating question: {q['name']}")
-        card_id = create_question(
-            session_token,
-            database_id,
-            q['name'],
-            q['sql'],
-            q['viz']
-        )
-        
-        # Add to dashboard
-        add_card_to_dashboard(
-            session_token,
-            dashboard_id,
-            card_id,
-            q['position']['row'],
-            q['position']['col'],
-            q['position']['size_x'],
-            q['position']['size_y']
-        )
-        logging.info(f"✓ Added '{q['name']}' to dashboard")
+    # Create dashboard with all cards
+    dashboard_id = create_dashboard_with_cards(
+        session_token,
+        "Executive Overview",
+        "Key performance metrics and trends for ShopZada",
+        database_id,
+        questions
+    )
     
     logging.info(f"\n✅ Executive Overview dashboard created successfully!")
     logging.info(f"View at: {METABASE_URL}/dashboard/{dashboard_id}")
