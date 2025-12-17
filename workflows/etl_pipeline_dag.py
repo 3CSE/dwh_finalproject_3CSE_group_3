@@ -192,7 +192,7 @@ with DAG(
     refresh_metabase_task = create_task_direct("dashboard/scripts/refresh_metabase.py")
     
     # 8. Build Dashboard - Create Executive Overview dashboard
-    build_dashboard_task = create_task_direct("dashboard/scripts/create_executive_overview.py")
+    build_dashboard_task = create_task_direct("dashboard/scripts/pages/create_executive_overview.py")
     
     # Dashboard tasks run after FactOrder completes
     if fact_order_task:
