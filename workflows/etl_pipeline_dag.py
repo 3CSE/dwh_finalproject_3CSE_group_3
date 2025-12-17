@@ -191,9 +191,12 @@ with DAG(
     # 7. Metabase Refresh - Sync database metadata after ETL
     refresh_metabase_task = create_task_direct("dashboard/scripts/refresh_metabase.py")
     
-    # 8. Build Dashboard - Create Executive Overview dashboard
-    build_dashboard_task = create_task_direct("dashboard/scripts/pages/create_executive_overview.py")
+    # 8. Create Dashboard - Create main ShopZada Dashboard container
+    create_dashboard_task = create_task_direct("dashboard/scripts/create_dashboard.py")
+    
+    # 9. Build Pages - Add Executive Overview section
+    build_executive_overview_task = create_task_direct("dashboard/scripts/pages/create_executive_overview.py")
     
     # Dashboard tasks run after FactOrder completes
     if fact_order_task:
-        fact_order_task >> setup_metabase_task >> refresh_metabase_task >> build_dashboard_task
+        fact_order_task >> setup_metabase_task >> refresh_metabase_task >> create_dashboard_task >> build_executive_overview_task

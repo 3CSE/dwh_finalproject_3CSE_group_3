@@ -70,6 +70,17 @@ def create_dashboard(session_token, name, description=""):
     response.raise_for_status()
     return response.json()['id']
 
+def get_dashboard_by_name(session_token, name):
+    """Get dashboard by name"""
+    headers = {'X-Metabase-Session': session_token}
+    response = requests.get(f'{METABASE_URL}/api/dashboard', headers=headers)
+    response.raise_for_status()
+    
+    for dashboard in response.json()['data']:
+        if dashboard['name'] == name:
+            return dashboard['id']
+    raise Exception(f"Dashboard '{name}' not found")
+
 def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x=4, size_y=4):
     """Add a card to a dashboard"""
     headers = {'X-Metabase-Session': session_token}
@@ -91,53 +102,9 @@ def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x
     response.raise_for_status()
     return response.json()
 
-def create_dashboard_with_cards(session_token, name, description, database_id, questions):
-    """Create a dashboard with all cards in one operation"""
-    headers = {'X-Metabase-Session': session_token}
-    
-    # Create all questions first
-    card_ids = []
-    for q in questions:
-        logging.info(f"Creating question: {q['name']}")
-        card_id = create_question(
-            session_token,
-            database_id,
-            q['name'],
-            q['sql'],
-            q['viz']
-        )
-        card_ids.append((card_id, q['position']))
-    
-    # Create ordered_cards structure
-    ordered_cards = []
-    for idx, (card_id, position) in enumerate(card_ids):
-        ordered_cards.append({
-            "id": idx,
-            "card_id": card_id,
-            "row": position['row'],
-            "col": position['col'],
-            "sizeX": position['size_x'],
-            "sizeY": position['size_y']
-        })
-    
-    # Create dashboard with cards
-    payload = {
-        "name": name,
-        "description": description,
-        "ordered_cards": ordered_cards
-    }
-    
-    response = requests.post(
-        f'{METABASE_URL}/api/dashboard',
-        headers=headers,
-        json=payload
-    )
-    response.raise_for_status()
-    return response.json()['id']
-
 def build_executive_dashboard():
-    """Build the Executive Overview dashboard"""
-    logging.info("Starting Executive Overview dashboard creation...")
+    """Build the Executive Overview section"""
+    logging.info("Adding Executive Overview to ShopZada Dashboard...")
     
     # Login
     session_token = login_to_metabase()
@@ -146,6 +113,10 @@ def build_executive_dashboard():
     # Get database ID
     database_id = get_database_id(session_token)
     logging.info(f"✓ Found database ID: {database_id}")
+    
+    # Get ShopZada Dashboard
+    dashboard_id = get_dashboard_by_name(session_token, "ShopZada Dashboard")
+    logging.info(f"✓ Found ShopZada Dashboard (ID: {dashboard_id})")
     
     # Define all questions with their SQL
     questions = [
@@ -262,17 +233,53 @@ LIMIT 5""",
         }
     ]
     
-    # Create dashboard with all cards
-    dashboard_id = create_dashboard_with_cards(
-        session_token,
-        "ShopZada Dashboard",
-        "Analytics and insights for ShopZada e-commerce platform",
-        database_id,
-        questions
-    )
+    # Create all questions first
+    card_ids = []
+    for q in questions:
+        logging.info(f"Creating question: {q['name']}")
+        card_id = create_question(
+            session_token,
+            database_id,
+            q['name'],
+            q['sql'],
+            q['viz']
+        )
+        card_ids.append((card_id, q['position']))
     
-    logging.info(f"\n✅ ShopZada Dashboard created successfully!")
-    logging.info(f"✓ Executive Overview section added")
+    # Get existing dashboard to get current cards
+    headers = {'X-Metabase-Session': session_token}
+    response = requests.get(
+        f'{METABASE_URL}/api/dashboard/{dashboard_id}',
+        headers=headers
+    )
+    response.raise_for_status()
+    dashboard = response.json()
+    
+    # Get existing cards
+    existing_cards = dashboard.get('dashcards', [])
+    
+    # Create ordered_cards structure with existing + new cards
+    ordered_cards = existing_cards.copy()
+    for idx, (card_id, position) in enumerate(card_ids):
+        ordered_cards.append({
+            "id": len(existing_cards) + idx,
+            "card_id": card_id,
+            "row": position['row'],
+            "col": position['col'],
+            "sizeX": position['size_x'],
+            "sizeY": position['size_y']
+        })
+    
+    # Update dashboard with all cards
+    response = requests.put(
+        f'{METABASE_URL}/api/dashboard/{dashboard_id}/cards',
+        headers=headers,
+        json={"cards": ordered_cards}
+    )
+    response.raise_for_status()
+    
+    logging.info(f"\n✅ Executive Overview section added successfully!")
+    logging.info(f"Added {len(card_ids)} cards to dashboard")
     logging.info(f"View at: {METABASE_URL}/dashboard/{dashboard_id}")
     return dashboard_id
 
@@ -280,5 +287,6 @@ if __name__ == "__main__":
     try:
         build_executive_dashboard()
     except Exception as e:
-        logging.error(f"❌ Failed to create dashboard: {e}")
+        logging.error(f"❌ Failed to create Executive Overview: {e}")
         exit(1)
+
