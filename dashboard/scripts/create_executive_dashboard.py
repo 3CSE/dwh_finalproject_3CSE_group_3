@@ -6,9 +6,9 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Metabase configuration
-METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:3000')
-METABASE_EMAIL = os.getenv('METABASE_EMAIL', 'admin@example.com')
-METABASE_PASSWORD = os.getenv('METABASE_PASSWORD', 'admin123')
+METABASE_URL = os.getenv('METABASE_URL', 'http://shopzada_metabase:3000')
+METABASE_EMAIL = os.getenv('METABASE_EMAIL', 'admin@admin.com')
+METABASE_PASSWORD = os.getenv('METABASE_PASSWORD', 'admin')
 
 def login_to_metabase():
     """Login to Metabase and get session token"""

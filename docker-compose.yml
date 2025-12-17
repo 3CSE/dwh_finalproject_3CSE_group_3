@@ -59,6 +59,7 @@ services:
       - ./dataset:/opt/airflow/dataset
       - ./workflows:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - ./dashboard:/opt/airflow/dashboard
     ports:
       - "8080:8080"
     command: airflow webserver
