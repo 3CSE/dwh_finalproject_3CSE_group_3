@@ -265,13 +265,14 @@ LIMIT 5""",
     # Create dashboard with all cards
     dashboard_id = create_dashboard_with_cards(
         session_token,
-        "Executive Overview",
-        "Key performance metrics and trends for ShopZada",
+        "ShopZada Dashboard",
+        "Analytics and insights for ShopZada e-commerce platform",
         database_id,
         questions
     )
     
-    logging.info(f"\n✅ Executive Overview dashboard created successfully!")
+    logging.info(f"\n✅ ShopZada Dashboard created successfully!")
+    logging.info(f"✓ Executive Overview section added")
     logging.info(f"View at: {METABASE_URL}/dashboard/{dashboard_id}")
     return dashboard_id
 
