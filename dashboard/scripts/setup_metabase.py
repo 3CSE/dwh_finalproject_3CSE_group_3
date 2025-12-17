@@ -66,11 +66,24 @@ def create_admin_account():
             f'{METABASE_URL}/api/setup',
             json=setup_data
         )
+        
+        # 403 means setup is already complete - this is OK
+        if response.status_code == 403:
+            logging.info("✓ Setup already complete (Metabase auto-initialized)")
+            return True
+            
         response.raise_for_status()
         
         logging.info(f"✓ Created admin account: {METABASE_EMAIL}")
         return True
         
+    except requests.exceptions.HTTPError as e:
+        # If it's a 403, setup is already done - that's fine
+        if e.response.status_code == 403:
+            logging.info("✓ Setup already complete")
+            return True
+        logging.error(f"✗ Failed to create admin account: {e}")
+        raise
     except Exception as e:
         logging.error(f"✗ Failed to create admin account: {e}")
         raise
