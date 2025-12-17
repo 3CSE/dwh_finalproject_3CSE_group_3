@@ -6,7 +6,33 @@ import subprocess
 import os
 import logging
 
-def run_script_safe(script_path):
+# Define generic script runner that can handle both .py scripts and .sql files (via wrapper)
+def run_wrapper_safe(wrapper_script, target_file):
+    if os.path.exists(wrapper_script) and os.path.exists(target_file):
+        try:
+            env = os.environ.copy()
+            env["PYTHONPATH"] = "/opt/airflow:" + env.get("PYTHONPATH", "")
+            
+            # Executing: python execute_sql_file.py /path/to/script.sql
+            result = subprocess.run(
+                ["python", wrapper_script, target_file],
+                check=True,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            logging.info(result.stdout)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error running {target_file} via {wrapper_script}: {e}")
+            logging.error(e.stdout if e.stdout else "No output captured")
+            raise  # Raise error to fail the Airflow task
+    else:
+        logging.error(f"File not found: Wrapper={wrapper_script}, Target={target_file}")
+        raise FileNotFoundError(f"File not found: Wrapper={wrapper_script}, Target={target_file}")
+
+def run_script_direct(script_path):
+    # For running pure python scripts like file_loader.py
     if os.path.exists(script_path):
         try:
             env = os.environ.copy()
@@ -23,14 +49,29 @@ def run_script_safe(script_path):
         except subprocess.CalledProcessError as e:
             logging.error(f"Error running {script_path}: {e}")
             logging.error(e.stdout if e.stdout else "No output captured")
+            raise
     else:
         logging.error(f"Script not found: {script_path}")
+        raise FileNotFoundError(f"Script not found: {script_path}")
 
-def create_task_safe(script_path):
+def create_task_from_sql(sql_file_path):
+    # Creates a task that runs the SQL file using the shared execute_sql_file.py script
+    task_id = os.path.splitext(os.path.basename(sql_file_path))[0]
+    wrapper_path = "scripts/execute_sql_file.py"
+    
+    return PythonOperator(
+        task_id=task_id,
+        python_callable=lambda: run_wrapper_safe(wrapper_path, sql_file_path),
+        retries=2,
+        retry_delay=timedelta(minutes=2)
+    )
+
+def create_task_direct(script_path):
+    # Creates a task for a pure Python script
     task_id = os.path.splitext(os.path.basename(script_path))[0]
     return PythonOperator(
         task_id=task_id,
-        python_callable=lambda s=script_path: run_script_safe(s),
+        python_callable=lambda: run_script_direct(script_path),
         retries=2,
         retry_delay=timedelta(minutes=2)
     )
@@ -40,40 +81,41 @@ with DAG(
     start_date=datetime(2025, 11, 27),
     schedule_interval="@daily",
     catchup=False,
-    tags=["ETL", "safe"]
+    tags=["ETL", "safe", "modular_sql"]
 ) as dag:
 
     # Stage 1: parallel
-    db_conn = create_task_safe("scripts/database_connection.py")
-    file_load = create_task_safe("scripts/file_loader.py")
+    db_conn = create_task_direct("scripts/database_connection.py")
+    file_load = create_task_direct("scripts/file_loader.py")
 
     # Stage 2
-    file_discover = create_task_safe("scripts/file_discovery.py")
-    universal_ingest = create_task_safe("scripts/universal_ingest.py")
+    file_discover = create_task_direct("scripts/file_discovery.py")
+    universal_ingest = create_task_direct("scripts/universal_ingest.py")
 
     # Stage 1 → Stage 2
     db_conn >> file_discover
     file_load >> file_discover
 
-    # Stage 3: ingestion scripts
+    # Stage 3: ingestion scripts (these are Python)
     ingestion_folder = "scripts/ingestion"
     ingestion_tasks = []
     if os.path.exists(ingestion_folder):
         for f in sorted(os.listdir(ingestion_folder)):
             if f.endswith(".py") and f.startswith("ingest_"):
                 script_path = os.path.join(ingestion_folder, f)
-                ingestion_tasks.append(create_task_safe(script_path))
+                ingestion_tasks.append(create_task_direct(script_path))
 
-    # Stage 4: Data Cleaning (auto-discover)
-    cleaning_folder = "scripts/cleaning"
+    # Stage 4: Data Cleaning (Auto-discover SQL files)
+    # Changed from scripts/cleaning/*.py to sql/clean/*.sql matching colleague's request
+    cleaning_folder = "sql/clean"
     lookup_tasks = []
     other_cleaning_tasks = []
     
     if os.path.exists(cleaning_folder):
         for f in sorted(os.listdir(cleaning_folder)):
-            if f.endswith(".py") and (f.startswith("clean_") or "lookup_view" in f):
-                script_path = os.path.join(cleaning_folder, f)
-                task = create_task_safe(script_path)
+            if f.endswith(".sql"):
+                file_path = os.path.join(cleaning_folder, f)
+                task = create_task_from_sql(file_path)
                 
                 # Separate lookups from other cleaning scripts
                 if "lookup_view" in f:
@@ -81,17 +123,18 @@ with DAG(
                 else:
                     other_cleaning_tasks.append(task)
 
-    # Stage 5: loading scripts (auto-discover and separate dimensions from facts)
-    loading_folder = "scripts/loading"
+    # Stage 5: loading scripts (Auto-discover SQL files)
+    # Changed from scripts/loading/*.py to sql/load/*.sql
+    loading_folder = "sql/load"
     dimension_tasks = []
     fact_order_line_item_task = None
     fact_order_task = None
     
     if os.path.exists(loading_folder):
         for f in sorted(os.listdir(loading_folder)):
-            if f.endswith(".py") and f.startswith("load_"):
-                script_path = os.path.join(loading_folder, f)
-                task = create_task_safe(script_path)
+            if f.endswith(".sql"):
+                file_path = os.path.join(loading_folder, f)
+                task = create_task_from_sql(file_path)
                 
                 # Separate dimensions from facts
                 if "dim_" in f.lower():
