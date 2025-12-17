@@ -75,15 +75,17 @@ def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x
     headers = {'X-Metabase-Session': session_token}
     
     payload = {
-        "cardId": card_id,
-        "row": row,
-        "col": col,
-        "sizeX": size_x,
-        "sizeY": size_y
+        "cards": [{
+            "card_id": card_id,
+            "row": row,
+            "col": col,
+            "size_x": size_x,
+            "size_y": size_y
+        }]
     }
     
-    response = requests.post(
-        f'{METABASE_URL}/api/dashboard/{dashboard_id}/dashcard',
+    response = requests.put(
+        f'{METABASE_URL}/api/dashboard/{dashboard_id}/cards',
         headers=headers,
         json=payload
     )
