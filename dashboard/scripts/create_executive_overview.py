@@ -83,7 +83,7 @@ def add_card_to_dashboard(session_token, dashboard_id, card_id, row, col, size_x
     }
     
     response = requests.post(
-        f'{METABASE_URL}/api/dashboard/{dashboard_id}/cards',
+        f'{METABASE_URL}/api/dashboard/{dashboard_id}/dashcard',
         headers=headers,
         json=payload
     )
