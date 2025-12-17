@@ -38,7 +38,7 @@ services:
       DB_HOST: postgres-dw
       DB_NAME: shopzada_dw
       DB_USER: admin
-      DB_PASS: user
+      DB_PASS: admin
       DB_PORT: 5432
     depends_on:
       - postgres-dw
@@ -64,7 +64,7 @@ services:
       DB_HOST: postgres-dw
       DB_NAME: shopzada_dw
       DB_USER: admin
-      DB_PASS: user
+      DB_PASS: admin
       DB_PORT: 5432
     depends_on:
       - postgres-dw
