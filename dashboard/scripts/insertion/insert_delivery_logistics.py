@@ -39,7 +39,7 @@ def get_card_by_name(session_token, name):
 def insert_delivery_logistics_cards():
     logging.info("Inserting Delivery & Logistics cards...")
     session_token = login_to_metabase()
-    dashboard_id = get_dashboard_by_name(session_token, "Delivery & Logistics")
+    dashboard_id = get_dashboard_by_name(session_token, "Delivery & Logistics Deep Dive")
     
     card_layout = [
         {"name": "On-Time Delivery Percentage", "position": {"row": 0, "col": 0, "size_x": 6, "size_y": 4}},
@@ -60,7 +60,7 @@ def insert_delivery_logistics_cards():
             card_positions.append((card_id, card_info['position']))
             logging.info(f"✓ Found card: {card_info['name']}")
         except:
-            logging.warn ing(f"⚠ Card not found: {card_info['name']}")
+            logging.warning(f"⚠ Card not found: {card_info['name']}")
     
     headers = {'X-Metabase-Session': session_token}
     response = requests.get(f'{METABASE_URL}/api/dashboard/{dashboard_id}', headers=headers)

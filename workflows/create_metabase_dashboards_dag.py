@@ -24,7 +24,7 @@ sys.path.insert(0, str(INSERTION_DIR))
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2025, 12, 18),
+    'start_date': datetime(2025, 11, 27),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -54,6 +54,15 @@ def run_script(script_name, function_name):
 # =============================================================================
 # SETUP TASKS
 # =============================================================================
+# Task 0: Initialize Metabase database
+init_metabase_db_task = PythonOperator(
+    task_id='init_metabase_db',
+    python_callable=run_python_script,
+    op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/init_metabase_db.py'},
+    dag=dag,
+)
+
+# Task 1: Setup Metabase admin account and add warehouse database
 setup_metabase_task = PythonOperator(
     task_id='setup_metabase',
     python_callable=run_python_script,
@@ -61,6 +70,7 @@ setup_metabase_task = PythonOperator(
     dag=dag,
 )
 
+# Task 2: Refresh Metabase database metadata
 refresh_metabase_task = PythonOperator(
     task_id='refresh_metabase',
     python_callable=run_python_script,
@@ -71,56 +81,56 @@ refresh_metabase_task = PythonOperator(
 # =============================================================================
 # DASHBOARD CREATION TASKS (12)
 # =============================================================================
-exec_dash = PythonOperator(task_id='create_executive_overview_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_executive_overview', 'function_name': 'create_executive_overview_dashboard'}, dag=dag)
-camp_dash = PythonOperator(task_id='create_campaign_performance_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_campaign_performance', 'function_name': 'create_campaign_performance_dashboard'}, dag=dag)
-cust_dash = PythonOperator(task_id='create_customer_analytics_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_customer_analytics', 'function_name': 'create_customer_analytics_dashboard'}, dag=dag)
-geo_dash = PythonOperator(task_id='create_geographic_performance_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_geographic_performance', 'function_name': 'create_geographic_performance_dashboard'}, dag=dag)
-merch_dash = PythonOperator(task_id='create_merchant_performance_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_merchant_performance', 'function_name': 'create_merchant_performance_dashboard'}, dag=dag)
-prod_dash = PythonOperator(task_id='create_product_performance_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_product_performance', 'function_name': 'create_product_performance_dashboard'}, dag=dag)
-staff_dash = PythonOperator(task_id='create_staff_operations_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_staff_operations', 'function_name': 'create_staff_operations_dashboard'}, dag=dag)
-deliv_dash = PythonOperator(task_id='create_delivery_logistics_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_delivery_logistics', 'function_name': 'create_delivery_logistics_dashboard'}, dag=dag)
-time_dash = PythonOperator(task_id='create_time_based_analysis_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_time_based_analysis', 'function_name': 'create_time_based_analysis_dashboard'}, dag=dag)
-basket_dash = PythonOperator(task_id='create_market_basket_analysis_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_market_basket_analysis', 'function_name': 'create_market_basket_analysis_dashboard'}, dag=dag)
-seg_dash = PythonOperator(task_id='create_customer_segmentation_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_customer_segmentation', 'function_name': 'create_customer_segmentation_dashboard'}, dag=dag)
-roi_dash = PythonOperator(task_id='create_campaign_roi_dashboard', python_callable=run_script, op_kwargs={'script_name': 'create_campaign_roi', 'function_name': 'create_campaign_roi_dashboard'}, dag=dag)
+exec_dash = PythonOperator(task_id='create_executive_overview_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_executive_overview.py'}, dag=dag)
+camp_dash = PythonOperator(task_id='create_campaign_performance_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_campaign_performance.py'}, dag=dag)
+cust_dash = PythonOperator(task_id='create_customer_analytics_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_customer_analytics.py'}, dag=dag)
+geo_dash = PythonOperator(task_id='create_geographic_performance_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_geographic_performance.py'}, dag=dag)
+merch_dash = PythonOperator(task_id='create_merchant_performance_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_merchant_performance.py'}, dag=dag)
+prod_dash = PythonOperator(task_id='create_product_performance_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_product_performance.py'}, dag=dag)
+staff_dash = PythonOperator(task_id='create_staff_operations_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_staff_operations.py'}, dag=dag)
+deliv_dash = PythonOperator(task_id='create_delivery_logistics_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_delivery_logistics.py'}, dag=dag)
+time_dash = PythonOperator(task_id='create_time_based_analysis_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_time_based_analysis.py'}, dag=dag)
+basket_dash = PythonOperator(task_id='create_market_basket_analysis_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_market_basket_analysis.py'}, dag=dag)
+seg_dash = PythonOperator(task_id='create_customer_segmentation_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_customer_segmentation.py'}, dag=dag)
+roi_dash = PythonOperator(task_id='create_campaign_roi_dashboard', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/pages/create_campaign_roi.py'}, dag=dag)
 
 # =============================================================================
 # CARD CREATION TASKS (12)
 # =============================================================================
-exec_cards = PythonOperator(task_id='create_executive_overview_cards', python_callable=run_script, op_kwargs={'script_name': 'executive_overview_cards', 'function_name': 'create_executive_overview_cards'}, dag=dag)
-camp_cards = PythonOperator(task_id='create_campaign_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'campaign_performance_cards', 'function_name': 'create_campaign_performance_cards'}, dag=dag)
-cust_cards = PythonOperator(task_id='create_customer_analytics_cards', python_callable=run_script, op_kwargs={'script_name': 'customer_analytics_cards', 'function_name': 'create_customer_analytics_cards'}, dag=dag)
-geo_cards = PythonOperator(task_id='create_geographic_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'geographic_performance_cards', 'function_name': 'create_geographic_performance_cards'}, dag=dag)
-merch_cards = PythonOperator(task_id='create_merchant_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'merchant_performance_cards', 'function_name': 'create_merchant_performance_cards'}, dag=dag)
-prod_cards = PythonOperator(task_id='create_product_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'product_performance_cards', 'function_name': 'create_product_performance_cards'}, dag=dag)
-staff_cards = PythonOperator(task_id='create_staff_operations_cards', python_callable=run_script, op_kwargs={'script_name': 'staff_operations_cards', 'function_name': 'create_staff_operations_cards'}, dag=dag)
-deliv_cards = PythonOperator(task_id='create_delivery_logistics_cards', python_callable=run_script, op_kwargs={'script_name': 'delivery_logistics_cards', 'function_name': 'create_delivery_logistics_cards'}, dag=dag)
-time_cards = PythonOperator(task_id='create_time_based_analysis_cards', python_callable=run_script, op_kwargs={'script_name': 'time_based_analysis_cards', 'function_name': 'create_time_based_analysis_cards'}, dag=dag)
-basket_cards = PythonOperator(task_id='create_market_basket_analysis_cards', python_callable=run_script, op_kwargs={'script_name': 'market_basket_analysis_cards', 'function_name': 'create_market_basket_analysis_cards'}, dag=dag)
-seg_cards = PythonOperator(task_id='create_customer_segmentation_cards', python_callable=run_script, op_kwargs={'script_name': 'customer_segmentation_cards', 'function_name': 'create_customer_segmentation_cards'}, dag=dag)
-roi_cards = PythonOperator(task_id='create_campaign_roi_cards', python_callable=run_script, op_kwargs={'script_name': 'campaign_roi_cards', 'function_name': 'create_campaign_roi_cards'}, dag=dag)
+exec_cards = PythonOperator(task_id='create_executive_overview_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/executive_overview_cards.py'}, dag=dag)
+camp_cards = PythonOperator(task_id='create_campaign_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/campaign_performance_cards.py'}, dag=dag)
+cust_cards = PythonOperator(task_id='create_customer_analytics_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/customer_analytics_cards.py'}, dag=dag)
+geo_cards = PythonOperator(task_id='create_geographic_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/geographic_performance_cards.py'}, dag=dag)
+merch_cards = PythonOperator(task_id='create_merchant_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/merchant_performance_cards.py'}, dag=dag)
+prod_cards = PythonOperator(task_id='create_product_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/product_performance_cards.py'}, dag=dag)
+staff_cards = PythonOperator(task_id='create_staff_operations_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/staff_operations_cards.py'}, dag=dag)
+deliv_cards = PythonOperator(task_id='create_delivery_logistics_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/delivery_logistics_cards.py'}, dag=dag)
+time_cards = PythonOperator(task_id='create_time_based_analysis_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/time_based_analysis_cards.py'}, dag=dag)
+basket_cards = PythonOperator(task_id='create_market_basket_analysis_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/market_basket_analysis_cards.py'}, dag=dag)
+seg_cards = PythonOperator(task_id='create_customer_segmentation_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/customer_segmentation_cards.py'}, dag=dag)
+roi_cards = PythonOperator(task_id='create_campaign_roi_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/cards/campaign_roi_cards.py'}, dag=dag)
 
 # =============================================================================
 # CARD INSERTION TASKS (12)
 # =============================================================================
-exec_insert = PythonOperator(task_id='insert_executive_overview_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_executive_overview', 'function_name': 'build_executive_dashboard'}, dag=dag)
-camp_insert = PythonOperator(task_id='insert_campaign_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_campaign_performance', 'function_name': 'insert_campaign_performance_cards'}, dag=dag)
-cust_insert = PythonOperator(task_id='insert_customer_analytics_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_customer_analytics', 'function_name': 'insert_customer_analytics_cards'}, dag=dag)
-geo_insert = PythonOperator(task_id='insert_geographic_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_geographic_performance', 'function_name': 'insert_geographic_performance_cards'}, dag=dag)
-merch_insert = PythonOperator(task_id='insert_merchant_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_merchant_performance', 'function_name': 'insert_merchant_performance_cards'}, dag=dag)
-prod_insert = PythonOperator(task_id='insert_product_performance_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_product_performance', 'function_name': 'insert_product_performance_cards'}, dag=dag)
-staff_insert = PythonOperator(task_id='insert_staff_operations_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_staff_operations', 'function_name': 'insert_staff_operations_cards'}, dag=dag)
-deliv_insert = PythonOperator(task_id='insert_delivery_logistics_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_delivery_logistics', 'function_name': 'insert_delivery_logistics_cards'}, dag=dag)
-time_insert = PythonOperator(task_id='insert_time_based_analysis_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_time_based_analysis', 'function_name': 'insert_time_based_analysis_cards'}, dag=dag)
-basket_insert = PythonOperator(task_id='insert_market_basket_analysis_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_market_basket_analysis', 'function_name': 'insert_market_basket_analysis_cards'}, dag=dag)
-seg_insert = PythonOperator(task_id='insert_customer_segmentation_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_customer_segmentation', 'function_name': 'insert_customer_segmentation_cards'}, dag=dag)
-roi_insert = PythonOperator(task_id='insert_campaign_roi_cards', python_callable=run_script, op_kwargs={'script_name': 'insert_campaign_roi', 'function_name': 'insert_campaign_roi_cards'}, dag=dag)
+exec_insert = PythonOperator(task_id='insert_executive_overview_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_executive_overview.py'}, dag=dag)
+camp_insert = PythonOperator(task_id='insert_campaign_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_campaign_performance.py'}, dag=dag)
+cust_insert = PythonOperator(task_id='insert_customer_analytics_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_customer_analytics.py'}, dag=dag)
+geo_insert = PythonOperator(task_id='insert_geographic_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_geographic_performance.py'}, dag=dag)
+merch_insert = PythonOperator(task_id='insert_merchant_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_merchant_performance.py'}, dag=dag)
+prod_insert = PythonOperator(task_id='insert_product_performance_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_product_performance.py'}, dag=dag)
+staff_insert = PythonOperator(task_id='insert_staff_operations_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_staff_operations.py'}, dag=dag)
+deliv_insert = PythonOperator(task_id='insert_delivery_logistics_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_delivery_logistics.py'}, dag=dag)
+time_insert = PythonOperator(task_id='insert_time_based_analysis_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_time_based_analysis.py'}, dag=dag)
+basket_insert = PythonOperator(task_id='insert_market_basket_analysis_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_market_basket_analysis.py'}, dag=dag)
+seg_insert = PythonOperator(task_id='insert_customer_segmentation_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_customer_segmentation.py'}, dag=dag)
+roi_insert = PythonOperator(task_id='insert_campaign_roi_cards', python_callable=run_python_script, op_kwargs={'script_path': '/opt/airflow/dashboard/scripts/insertion/insert_campaign_roi.py'}, dag=dag)
 
 # =============================================================================
 # DEPENDENCIES
 # =============================================================================
-# Setup sequence
-setup_metabase_task >> refresh_metabase_task
+# Initialize metabase database, then setup sequence
+init_metabase_db_task >> setup_metabase_task >> refresh_metabase_task
 
 # Dashboards run after refresh (parallel)
 refresh_metabase_task >> [exec_dash, camp_dash, cust_dash, geo_dash, merch_dash, prod_dash, staff_dash, deliv_dash, time_dash, basket_dash, seg_dash, roi_dash]
