@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Metabase configuration
 METABASE_URL = os.getenv('METABASE_URL', 'http://shopzada_metabase:3000')
 METABASE_EMAIL = os.getenv('METABASE_EMAIL', 'admin@admin.com')
-METABASE_PASSWORD = os.getenv('METABASE_PASSWORD', 'admin')
+METABASE_PASSWORD = os.getenv('METABASE_PASSWORD', 'admin3')
 
 def login_to_metabase():
     """Login to Metabase and get session token"""

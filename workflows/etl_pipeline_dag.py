@@ -185,12 +185,15 @@ with DAG(
     if fact_order_line_item_task and fact_order_task:
         fact_order_line_item_task >> fact_order_task
     
-    # 6. Metabase Refresh - Sync database metadata after ETL
+    # 6. Metabase Setup - Create admin account and add warehouse database
+    setup_metabase_task = create_task_direct("dashboard/scripts/setup_metabase.py")
+    
+    # 7. Metabase Refresh - Sync database metadata after ETL
     refresh_metabase_task = create_task_direct("dashboard/scripts/refresh_metabase.py")
     
-    # 7. Build Dashboard - Create Executive Overview dashboard
+    # 8. Build Dashboard - Create Executive Overview dashboard
     build_dashboard_task = create_task_direct("dashboard/scripts/create_executive_dashboard.py")
     
     # Dashboard tasks run after FactOrder completes
     if fact_order_task:
-        fact_order_task >> refresh_metabase_task >> build_dashboard_task
+        fact_order_task >> setup_metabase_task >> refresh_metabase_task >> build_dashboard_task
