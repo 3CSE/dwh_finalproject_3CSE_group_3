@@ -76,7 +76,12 @@ def get_dashboard_by_name(session_token, name):
     response = requests.get(f'{METABASE_URL}/api/dashboard', headers=headers)
     response.raise_for_status()
     
-    for dashboard in response.json()['data']:
+    dashboards = response.json()
+    # Handle both list and dict with 'data' key
+    if isinstance(dashboards, dict) and 'data' in dashboards:
+        dashboards = dashboards['data']
+    
+    for dashboard in dashboards:
         if dashboard['name'] == name:
             return dashboard['id']
     raise Exception(f"Dashboard '{name}' not found")
