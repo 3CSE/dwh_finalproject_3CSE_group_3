@@ -13,7 +13,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d
+      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./sql:/sql
       - ./dataset:/dataset
 
   airflow-init:
@@ -33,7 +34,6 @@ services:
       DB_PASS: admin
       DB_PORT: 5432
 
-      
     depends_on:
       - postgres-dw
 
@@ -59,6 +59,7 @@ services:
       - ./dataset:/opt/airflow/dataset
       - ./workflows:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - ./dashboard:/opt/airflow/dashboard
     ports:
       - "8080:8080"
     command: airflow webserver
@@ -85,7 +86,29 @@ services:
       - ./dataset:/opt/airflow/dataset
       - ./workflows:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - ./dashboard:/opt/airflow/dashboard
     command: airflow scheduler
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: shopzada_metabase
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: admin
+      MB_DB_PASS: admin
+      MB_DB_HOST: postgres-dw
+    volumes:
+      - metabase_data:/metabase-data
+    depends_on:
+      - postgres-dw
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  metabase_data:
+
+
