@@ -184,3 +184,13 @@ with DAG(
     # 5. FactOrder runs AFTER FactOrderLineItem (as requested)
     if fact_order_line_item_task and fact_order_task:
         fact_order_line_item_task >> fact_order_task
+    
+    # 6. Metabase Refresh - Sync database metadata after ETL
+    refresh_metabase_task = create_task_direct("dashboard/scripts/refresh_metabase.py")
+    
+    # 7. Build Dashboard - Create Executive Overview dashboard
+    build_dashboard_task = create_task_direct("dashboard/scripts/create_executive_dashboard.py")
+    
+    # Dashboard tasks run after FactOrder completes
+    if fact_order_task:
+        fact_order_task >> refresh_metabase_task >> build_dashboard_task
