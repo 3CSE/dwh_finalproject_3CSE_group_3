@@ -112,16 +112,15 @@ FROM warehouse.factorderlineitem""",
             }
         },
         {
-            "name": "Top Products by Revenue and Quantity",
+            "name": "Top 5 Products by Revenue",
             "sql": """SELECT 
   p.product_name as "Product",
-  SUM(oli.line_total_amount) as "Revenue",
-  SUM(oli.quantity) as "Units Sold"
+  SUM(oli.line_total_amount) as "Revenue"
 FROM warehouse.factorderlineitem oli
 JOIN warehouse.dimproduct p ON oli.product_key = p.product_key
 GROUP BY p.product_name
 ORDER BY "Revenue" DESC
-LIMIT 10""",
+LIMIT 5""",
             "viz": {
                 "display": "row",
                 "column_settings": {
@@ -137,16 +136,14 @@ LIMIT 10""",
             "name": "Revenue by Product Type",
             "sql": """SELECT 
   p.product_type as "Product Type",
-  SUM(oli.line_total_amount) as "Revenue",
-  SUM(oli.quantity) as "Units Sold",
-  COUNT(DISTINCT oli.order_id) as "Orders"
+  SUM(oli.line_total_amount) as "Revenue"
 FROM warehouse.factorderlineitem oli
 JOIN warehouse.dimproduct p ON oli.product_key = p.product_key
 WHERE p.product_type IS NOT NULL
 GROUP BY p.product_type
 ORDER BY "Revenue" DESC""",
             "viz": {
-                "display": "table",
+                "display": "bar",
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
                         "number_style": "currency",
@@ -159,7 +156,7 @@ ORDER BY "Revenue" DESC""",
         {
             "name": "Campaign Impact on Product Sales",
             "sql": """SELECT 
-  p.product_type as "Product Type",
+  LEFT(p.product_type, 10) as "Product Type",
   SUM(CASE WHEN f.availed_flag = TRUE THEN oli.line_total_amount ELSE 0 END) as "Campaign Revenue",
   SUM(CASE WHEN f.availed_flag = FALSE THEN oli.line_total_amount ELSE 0 END) as "Non-Campaign Revenue"
 FROM warehouse.factorderlineitem oli
@@ -167,7 +164,7 @@ JOIN warehouse.dimproduct p ON oli.product_key = p.product_key
 JOIN warehouse.factorder f ON oli.order_id = f.order_id
 WHERE p.product_type IS NOT NULL
 GROUP BY p.product_type
-ORDER BY "Campaign Revenue" + "Non-Campaign Revenue" DESC
+ORDER BY SUM(oli.line_total_amount) DESC
 LIMIT 10""",
             "viz": {
                 "display": "bar",
@@ -186,27 +183,21 @@ LIMIT 10""",
             }
         },
         {
-            "name": "High Volume Low Revenue Products",
+            "name": "Top 5 High Volume Low Revenue Products",
             "sql": """SELECT 
-  p.product_name as "Product",
+  LEFT(p.product_name, 25) as "Product",
   SUM(oli.quantity) as "Volume",
-  SUM(oli.line_total_amount) as "Revenue",
-  ROUND(AVG(oli.unit_price), 2) as "Avg Unit Price"
+  SUM(oli.line_total_amount) as "Revenue"
 FROM warehouse.factorderlineitem oli
 JOIN warehouse.dimproduct p ON oli.product_key = p.product_key
 GROUP BY p.product_name
 HAVING SUM(oli.quantity) >= 10
 ORDER BY "Volume" DESC, "Revenue" ASC
-LIMIT 15""",
+LIMIT 5""",
             "viz": {
-                "display": "table",
+                "display": "row",
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
-                        "number_style": "currency",
-                        "currency": "PHP",
-                        "currency_style": "symbol"
-                    },
-                    "[\"name\",\"Avg Unit Price\"]": {
                         "number_style": "currency",
                         "currency": "PHP",
                         "currency_style": "symbol"
@@ -217,7 +208,7 @@ LIMIT 15""",
         {
             "name": "Product Types Under Campaigns",
             "sql": """SELECT 
-  p.product_type as "Product Type",
+  LEFT(p.product_type, 15) as "Product Type",
   COUNT(CASE WHEN f.availed_flag = TRUE THEN 1 END) as "Campaign Sales",
   COUNT(CASE WHEN f.availed_flag = FALSE THEN 1 END) as "Regular Sales"
 FROM warehouse.factorderlineitem oli

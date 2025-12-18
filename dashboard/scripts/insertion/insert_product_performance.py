@@ -46,10 +46,10 @@ def insert_product_performance_cards():
         {"name": "Total Units Sold", "position": {"row": 0, "col": 6, "size_x": 6, "size_y": 4}},
         {"name": "Total Product Revenue", "position": {"row": 0, "col": 12, "size_x": 6, "size_y": 4}},
         {"name": "Average Unit Price", "position": {"row": 0, "col": 18, "size_x": 6, "size_y": 4}},
-        {"name": "Top Products by Revenue and Quantity", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 Products by Revenue", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Revenue by Product Type", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
         {"name": "Campaign Impact on Product Sales", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
-        {"name": "High Volume Low Revenue Products", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 High Volume Low Revenue Products", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
         {"name": "Product Types Under Campaigns", "position": {"row": 16, "col": 0, "size_x": 24, "size_y": 6}},
     ]
     
