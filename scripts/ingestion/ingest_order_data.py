@@ -18,6 +18,14 @@ TABLE_NAME = "staging.stg_orders"
 REQUIRED_COLS = ["order_id", "user_id", "estimated_arrival", "transaction_date"]
 BATCH_SIZE = 5000
 
+# Define data types for validation in the universal ingestion script
+DTYPE_MAP = {
+    "order_id": "string",
+    "user_id": "string",
+    "estimated_arrival": "numeric",
+    "transaction_date": "datetime"
+}
+
 def ingest_orders():
     valid_files = find_valid_files(DATA_DIR, REQUIRED_COLS)
 
@@ -29,7 +37,8 @@ def ingest_orders():
         file_paths=valid_files,
         table_name=TABLE_NAME,
         required_cols=REQUIRED_COLS,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        dtype_map=DTYPE_MAP
     )
 
 if __name__ == "__main__":
