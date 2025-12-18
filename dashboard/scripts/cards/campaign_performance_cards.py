@@ -154,7 +154,6 @@ WHERE availed_flag = TRUE""",
   SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
-WHERE f.availed_flag = TRUE
 GROUP BY c.campaign_name
 ORDER BY "Revenue" DESC
 LIMIT 5""",
@@ -177,7 +176,6 @@ LIMIT 5""",
   COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
 JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
-WHERE f.availed_flag = TRUE
 GROUP BY c.campaign_name
 ORDER BY "Orders" DESC
 LIMIT 5""",
@@ -194,9 +192,7 @@ LIMIT 5""",
   COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
 JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
-WHERE f.availed_flag = TRUE
 GROUP BY c.campaign_name
-HAVING COUNT(f.order_id) >= 5
 ORDER BY "Revenue" DESC""",
             "viz": {
                 "display": "scatter",
@@ -227,7 +223,6 @@ top_campaigns AS (
   SELECT c.campaign_name
   FROM warehouse.factorder f
   JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
-  WHERE f.availed_flag = TRUE
   GROUP BY c.campaign_name
   ORDER BY SUM(f.net_order_amount) DESC
   LIMIT 5
@@ -240,8 +235,7 @@ FROM warehouse.factorder f
 JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
 JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
 CROSS JOIN max_date
-WHERE f.availed_flag = TRUE
-  AND d.full_date >= max_date.last_date - INTERVAL '12 months'
+WHERE d.full_date >= max_date.last_date - INTERVAL '12 months'
   AND c.campaign_name IN (SELECT campaign_name FROM top_campaigns)
 GROUP BY d.full_date::date, c.campaign_name
 ORDER BY d.full_date::date, "Revenue" DESC""",
