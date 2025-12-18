@@ -89,7 +89,12 @@ WHERE c.city IS NOT NULL""",
             "name": "Average Delivery Delay",
             "sql": """SELECT ROUND(AVG(delay_in_days), 2) as "Avg Delay (days)"
 FROM warehouse.factorder""",
-            "viz": {"display": "scalar"}
+            "viz": {
+                "display": "scalar",
+                "column_settings": {
+                    "[\"name\",\"Avg Delay (days)\"]": {"suffix": " days"}
+                }
+            }
         },
         {
             "name": "On-Time Delivery Percentage",
@@ -106,18 +111,16 @@ FROM warehouse.factorder""",
             }
         },
         {
-            "name": "Revenue by Country",
+            "name": "Top 5 Countries by Revenue",
             "sql": """SELECT 
   c.country as "Country",
-  SUM(f.net_order_amount) as "Revenue",
-  COUNT(f.order_id) as "Orders",
-  ROUND(AVG(f.net_order_amount), 2) as "AOV"
+  SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.country IS NOT NULL
 GROUP BY c.country
 ORDER BY "Revenue" DESC
-LIMIT 10""",
+LIMIT 5""",
             "viz": {
                 "display": "row",
                 "column_settings": {
@@ -153,7 +156,7 @@ LIMIT 10""",
             }
         },
         {
-            "name": "Average Delay by Country",
+            "name": "Top 10 Countries by Delivery Delay",
             "sql": """SELECT 
   c.country as "Country",
   ROUND(AVG(f.delay_in_days), 2) as "Avg Delay (days)",
@@ -163,8 +166,13 @@ JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.country IS NOT NULL
 GROUP BY c.country
 ORDER BY "Avg Delay (days)" DESC
-LIMIT 15""",
-            "viz": {"display": "table"}
+LIMIT 10""",
+            "viz": {
+                "display": "bar",
+                "column_settings": {
+                    "[\"name\",\"Avg Delay (days)\"]": {"suffix": " days"}
+                }
+            }
         },
         {
             "name": "Delay Trends Over Time",
@@ -174,17 +182,20 @@ LIMIT 15""",
   JOIN warehouse.factorder f ON d.date_key = f.transaction_date_key
 )
 SELECT 
-  d.year as "Year",
-  d.month as "Month",
-  d.month_name as "Month Name",
-  ROUND(AVG(f.delay_in_days), 2) as "Avg Delay"
+  CONCAT(d.month_name, ' ', d.year) as "Month",
+  ROUND(AVG(f.delay_in_days), 2) as "Avg Delay (days)"
 FROM warehouse.factorder f
 JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
 CROSS JOIN max_date
 WHERE d.full_date >= max_date.last_date - INTERVAL '12 months'
 GROUP BY d.year, d.month, d.month_name
 ORDER BY d.year, d.month""",
-            "viz": {"display": "line"}
+            "viz": {
+                "display": "line",
+                "column_settings": {
+                    "[\"name\",\"Avg Delay (days)\"]": {"suffix": " days"}
+                }
+            }
         }
     ]
     

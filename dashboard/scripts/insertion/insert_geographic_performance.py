@@ -48,9 +48,9 @@ def insert_geographic_performance_cards():
         {"name": "Total Cities", "position": {"row": 0, "col": 6, "size_x": 6, "size_y": 4}},
         {"name": "Average Delivery Delay", "position": {"row": 0, "col": 12, "size_x": 6, "size_y": 4}},
         {"name": "On-Time Delivery Percentage", "position": {"row": 0, "col": 18, "size_x": 6, "size_y": 4}},
-        {"name": "Revenue by Country", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 Countries by Revenue", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Top 10 Cities by Revenue", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
-        {"name": "Average Delay by Country", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Top 10 Countries by Delivery Delay", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Delay Trends Over Time", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
     ]
     

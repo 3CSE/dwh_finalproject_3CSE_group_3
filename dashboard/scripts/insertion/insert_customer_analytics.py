@@ -45,14 +45,14 @@ def insert_customer_analytics_cards():
     
     card_layout = [
         {"name": "Total Customers", "position": {"row": 0, "col": 0, "size_x": 6, "size_y": 4}},
-        {"name": "Repeat Purchase Rate", "position": {"row": 0, "col": 6, "size_x": 6, "size_y": 4}},
+        {"name": "Repeat Purchase Rate (Last 30 Days)", "position": {"row": 0, "col": 6, "size_x": 6, "size_y": 4}},
         {"name": "Customer Lifetime Value", "position": {"row": 0, "col": 12, "size_x": 6, "size_y": 4}},
         {"name": "Campaign Response Rate", "position": {"row": 0, "col": 18, "size_x": 6, "size_y": 4}},
-        {"name": "Revenue by Customer Segment", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 Customer Segments by Revenue", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Orders by Customer Segment", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
-        {"name": "Age Group Analysis", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 Age Groups by Spending", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Campaign Response by Segment", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
-        {"name": "Revenue by Location", "position": {"row": 16, "col": 0, "size_x": 24, "size_y": 6}},
+        {"name": "Top 5 Locations by Revenue", "position": {"row": 16, "col": 0, "size_x": 24, "size_y": 6}},
     ]
     
     card_positions = []

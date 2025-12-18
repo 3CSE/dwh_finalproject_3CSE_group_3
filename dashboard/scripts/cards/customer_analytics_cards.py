@@ -86,15 +86,19 @@ FROM warehouse.factorder""",
             "viz": {"display": "scalar"}
         },
         {
-            "name": "Repeat Purchase Rate",
+            "name": "Repeat Purchase Rate (Last 30 Days)",
             "sql": """WITH customer_orders AS (
-  SELECT customer_key, COUNT(order_id) as order_count
-  FROM warehouse.factorder
-  GROUP BY customer_key
+  SELECT f.customer_key, COUNT(DISTINCT f.order_id) as order_count
+  FROM warehouse.factorder f
+  JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
+  WHERE d.full_date >= (SELECT MAX(full_date) FROM warehouse.dimdate) - INTERVAL '30 days'
+  GROUP BY f.customer_key
 )
-SELECT ROUND(
-  (COUNT(CASE WHEN order_count > 1 THEN 1 END)::NUMERIC / COUNT(*)::NUMERIC) * 100,
-  2
+SELECT COALESCE(
+  ROUND(
+    (COUNT(CASE WHEN order_count > 1 THEN 1 END)::NUMERIC / NULLIF(COUNT(*)::NUMERIC, 0)) * 100,
+    2
+  ), 0
 ) as "Repeat Purchase Rate"
 FROM customer_orders""",
             "viz": {
@@ -137,17 +141,26 @@ FROM warehouse.factorder""",
             }
         },
         {
-            "name": "Revenue by Customer Segment",
+            "name": "Top 5 Customer Segments by Revenue",
             "sql": """SELECT 
-  c.user_type as "Customer Type",
-  c.job_level as "Job Level",
-  SUM(f.net_order_amount) as "Revenue",
-  COUNT(f.order_id) as "Orders"
+  CONCAT(c.user_type, ' - ', c.job_level) as "Segment",
+  SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
+WHERE c.user_type != 'Unknown' AND c.job_level != 'Unknown'
 GROUP BY c.user_type, c.job_level
-ORDER BY "Revenue" DESC""",
-            "viz": {"display": "table"}
+ORDER BY "Revenue" DESC
+LIMIT 5""",
+            "viz": {
+                "display": "row",
+                "column_settings": {
+                    "[\"name\",\"Revenue\"]": {
+                        "number_style": "currency",
+                        "currency": "PHP",
+                        "currency_style": "symbol"
+                    }
+                }
+            }
         },
         {
             "name": "Orders by Customer Segment",
@@ -161,7 +174,7 @@ ORDER BY "Orders" DESC""",
             "viz": {"display": "row"}
         },
         {
-            "name": "Age Group Analysis",
+            "name": "Top 5 Age Groups by Spending",
             "sql": """SELECT 
   CASE 
     WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) < 25 THEN 'Under 25'
@@ -170,23 +183,17 @@ ORDER BY "Orders" DESC""",
     WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) BETWEEN 45 AND 54 THEN '45-54'
     ELSE '55+'
   END as "Age Group",
-  SUM(f.net_order_amount) as "Total Spending",
-  COUNT(f.order_id) as "Order Count",
-  ROUND(AVG(f.net_order_amount), 2) as "AOV"
+  SUM(f.net_order_amount) as "Total Spending"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.birthdate IS NOT NULL
 GROUP BY "Age Group"
-ORDER BY "Total Spending" DESC""",
+ORDER BY "Total Spending" DESC
+LIMIT 5""",
             "viz": {
-                "display": "bar",
+                "display": "row",
                 "column_settings": {
                     "[\"name\",\"Total Spending\"]": {
-                        "number_style": "currency",
-                        "currency": "PHP",
-                        "currency_style": "symbol"
-                    },
-                    "[\"name\",\"AOV\"]": {
                         "number_style": "currency",
                         "currency": "PHP",
                         "currency_style": "symbol"
@@ -207,20 +214,18 @@ ORDER BY "Campaign Orders" DESC""",
             "viz": {"display": "bar"}
         },
         {
-            "name": "Revenue by Location",
+            "name": "Top 5 Locations by Revenue",
             "sql": """SELECT 
-  c.country as "Country",
-  c.city as "City",
-  SUM(f.net_order_amount) as "Revenue",
-  COUNT(f.order_id) as "Orders"
+  CONCAT(c.city, ', ', c.country) as "Location",
+  SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
-WHERE c.country IS NOT NULL
+WHERE c.country IS NOT NULL AND c.city IS NOT NULL
 GROUP BY c.country, c.city
 ORDER BY "Revenue" DESC
-LIMIT 20""",
+LIMIT 5""",
             "viz": {
-                "display": "table",
+                "display": "row",
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
                         "number_style": "currency",
