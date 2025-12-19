@@ -47,7 +47,7 @@ def insert_delivery_logistics_cards():
         {"name": "Orders with Delays", "position": {"row": 0, "col": 12, "size_x": 6, "size_y": 4}},
         {"name": "Worst Delay", "position": {"row": 0, "col": 18, "size_x": 6, "size_y": 4}},
         {"name": "Delay Trend Over Time", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
-        {"name": "Top 10 Merchants by Delay", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
+        {"name": "Top 5 Merchants by Delay", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
         {"name": "Delay by Country", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Customer Impact - Repeat Rate vs Delay", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
         {"name": "Delivery Delay Distribution", "position": {"row": 16, "col": 0, "size_x": 24, "size_y": 6}},

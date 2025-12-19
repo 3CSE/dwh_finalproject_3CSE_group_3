@@ -103,7 +103,12 @@ FROM warehouse.factorder f""",
             "name": "Merchant Average Delivery Delay",
             "sql": """SELECT ROUND(AVG(delay_in_days), 2) as "Avg Delivery Delay"
 FROM warehouse.factorder""",
-            "viz": {"display": "scalar"}
+            "viz": {
+                "display": "scalar",
+                "column_settings": {
+                    "[\"name\",\"Avg Delivery Delay\"]": {"suffix": " days"}
+                }
+            }
         },
         {
             "name": "Top Merchants by Revenue",
@@ -115,7 +120,7 @@ FROM warehouse.factorder f
 JOIN warehouse.dimmerchant m ON f.merchant_key = m.merchant_key
 GROUP BY m.name
 ORDER BY "Revenue" DESC
-LIMIT 15""",
+LIMIT 5""",
             "viz": {
                 "display": "row",
                 "column_settings": {
@@ -136,7 +141,7 @@ FROM warehouse.factorder f
 JOIN warehouse.dimmerchant m ON f.merchant_key = m.merchant_key
 GROUP BY m.name
 ORDER BY "Orders" DESC
-LIMIT 15""",
+LIMIT 5""",
             "viz": {"display": "row"}
         },
         {
@@ -150,7 +155,7 @@ JOIN warehouse.dimmerchant m ON f.merchant_key = m.merchant_key
 GROUP BY m.name
 HAVING COUNT(f.order_id) >= 10
 ORDER BY "Avg Delay (days)" ASC
-LIMIT 10""",
+LIMIT 5""",
             "viz": {"display": "row"}
         },
         {
@@ -164,7 +169,7 @@ JOIN warehouse.dimmerchant m ON f.merchant_key = m.merchant_key
 GROUP BY m.name
 HAVING COUNT(f.order_id) >= 10
 ORDER BY "Avg Delay (days)" DESC
-LIMIT 10""",
+LIMIT 5""",
             "viz": {"display": "row"}
         },
         {

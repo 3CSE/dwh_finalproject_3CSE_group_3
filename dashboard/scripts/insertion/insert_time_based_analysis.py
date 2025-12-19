@@ -46,10 +46,10 @@ def insert_time_based_analysis_cards():
         {"name": "Month-over-Month Growth", "position": {"row": 0, "col": 6, "size_x": 6, "size_y": 4}},
         {"name": "Current Month Revenue", "position": {"row": 0, "col": 12, "size_x": 6, "size_y": 4}},
         {"name": "Current Month Orders", "position": {"row": 0, "col": 18, "size_x": 6, "size_y": 4}},
-        {"name": "Revenue Trend - Year over Year", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Revenue Trend (Last 24 Months)", "position": {"row": 4, "col": 0, "size_x": 12, "size_y": 6}},
         {"name": "Order Volume Trend", "position": {"row": 4, "col": 12, "size_x": 12, "size_y": 6}},
-        {"name": "AOV Changes Over Time", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
-        {"name": "Seasonality - Orders by Month and Day of Week", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
+        {"name": "Average Order Value Over Time", "position": {"row": 10, "col": 0, "size_x": 12, "size_y": 6}},
+        {"name": "Seasonality - Orders by Month", "position": {"row": 10, "col": 12, "size_x": 12, "size_y": 6}},
         {"name": "Campaign Performance by Period", "position": {"row": 16, "col": 0, "size_x": 24, "size_y": 6}},
     ]
     

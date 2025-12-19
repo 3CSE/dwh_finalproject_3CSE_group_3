@@ -87,7 +87,12 @@ FROM warehouse.factorder""",
             "name": "Average Delay Days",
             "sql": """SELECT ROUND(AVG(delay_in_days), 2) as "Avg Delay (days)"
 FROM warehouse.factorder""",
-            "viz": {"display": "scalar"}
+            "viz": {
+                "display": "scalar",
+                "column_settings": {
+                    "[\"name\",\"Avg Delay (days)\"]": {"suffix": " days"}
+                }
+            }
         },
         {
             "name": "Orders with Delays",
@@ -100,7 +105,12 @@ WHERE delay_in_days > 0""",
             "name": "Worst Delay",
             "sql": """SELECT MAX(delay_in_days) as "Max Delay (days)"
 FROM warehouse.factorder""",
-            "viz": {"display": "scalar"}
+            "viz": {
+                "display": "scalar",
+                "column_settings": {
+                    "[\"name\",\"Max Delay (days)\"]": {"suffix": " days"}
+                }
+            }
         },
         {
             "name": "Delay Trend Over Time",
@@ -123,7 +133,7 @@ ORDER BY d.year, d.month""",
             "viz": {"display": "line"}
         },
         {
-            "name": "Top 10 Merchants by Delay",
+            "name": "Top 5 Merchants by Delay",
             "sql": """SELECT 
   m.name as "Merchant",
   ROUND(AVG(f.delay_in_days), 2) as "Avg Delay (days)",
@@ -133,7 +143,7 @@ JOIN warehouse.dimmerchant m ON f.merchant_key = m.merchant_key
 GROUP BY m.name
 HAVING COUNT(f.order_id) >= 10
 ORDER BY "Avg Delay (days)" DESC
-LIMIT 10""",
+LIMIT 5""",
             "viz": {"display": "row"}
         },
         {
@@ -142,13 +152,13 @@ LIMIT 10""",
   c.country as "Country",
   ROUND(AVG(f.delay_in_days), 2) as "Avg Delay (days)",
   COUNT(f.order_id) as "Orders"
-FROM warehouse. factorder f
+FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.country IS NOT NULL
 GROUP BY c.country
 ORDER BY "Avg Delay (days)" DESC
 LIMIT 15""",
-            "viz": {"display": "table"}
+            "viz": {"display": "row"}
         },
         {
             "name": "Customer Impact - Repeat Rate vs Delay",
@@ -178,27 +188,32 @@ ORDER BY "Avg Orders" DESC""",
         },
         {
             "name": "Delivery Delay Distribution",
-            "sql": """SELECT 
-  CASE 
-    WHEN delay_in_days < 0 THEN 'Early Delivery'
-    WHEN delay_in_days = 0 THEN 'On-Time'
-    WHEN delay_in_days BETWEEN 1 AND 3 THEN '1-3 Days Late'
-    WHEN delay_in_days BETWEEN 4 AND 7 THEN '4-7 Days Late'
-    WHEN delay_in_days BETWEEN 8 AND 14 THEN '8-14 Days Late'
-    ELSE '15+ Days Late'
-  END as "Delay Range",
+            "sql": """WITH delay_categories AS (
+  SELECT 
+    CASE 
+      WHEN delay_in_days < 0 THEN 'Early Delivery'
+      WHEN delay_in_days = 0 THEN 'On-Time'
+      WHEN delay_in_days BETWEEN 1 AND 3 THEN '1-3 Days Late'
+      WHEN delay_in_days BETWEEN 4 AND 7 THEN '4-7 Days Late'
+      WHEN delay_in_days BETWEEN 8 AND 14 THEN '8-14 Days Late'
+      ELSE '15+ Days Late'
+    END as delay_range,
+    CASE 
+      WHEN delay_in_days < 0 THEN 1
+      WHEN delay_in_days = 0 THEN 2
+      WHEN delay_in_days BETWEEN 1 AND 3 THEN 3
+      WHEN delay_in_days BETWEEN 4 AND 7 THEN 4
+      WHEN delay_in_days BETWEEN 8 AND 14 THEN 5
+      ELSE 6
+    END as sort_order
+  FROM warehouse.factorder
+)
+SELECT 
+  delay_range as "Delay Range",
   COUNT(*) as "Order Count"
-FROM warehouse.factorder
-GROUP BY "Delay Range"
-ORDER BY 
-  CASE 
-    WHEN delay_in_days < 0 THEN 1
-    WHEN delay_in_days = 0 THEN 2
-    WHEN delay_in_days BETWEEN 1 AND 3 THEN 3
-    WHEN delay_in_days BETWEEN 4 AND 7 THEN 4
-    WHEN delay_in_days BETWEEN 8 AND 14 THEN 5
-    ELSE 6
-  END""",
+FROM delay_categories
+GROUP BY delay_range, sort_order
+ORDER BY sort_order""",
             "viz": {"display": "bar"}
         }
     ]

@@ -141,7 +141,7 @@ FROM campaign_metrics""",
         {
             "name": "Campaign AOV Ranking",
             "sql": """SELECT 
-  c.campaign_name as "Campaign",
+  LEFT(c.campaign_name, 30) as "Campaign",
   ROUND(AVG(f.net_order_amount), 2) as "AOV",
   COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
@@ -151,7 +151,7 @@ WHERE f.availed_flag = TRUE
 GROUP BY c.campaign_name
 HAVING COUNT(f.order_id) >= 5
 ORDER BY "AOV" DESC
-LIMIT 15""",
+LIMIT 5""",
             "viz": {
                 "display": "row",
                 "column_settings": {
@@ -167,7 +167,7 @@ LIMIT 15""",
             "name": "Campaign Conversion Funnel",
             "sql": """WITH campaign_metrics AS (
   SELECT 
-    c.campaign_name,
+    LEFT(c.campaign_name, 25) as campaign_name,
     COUNT(CASE WHEN f.availed_flag = TRUE THEN 1 END) as converted,
     COUNT(*) as total_exposed
   FROM warehouse.factorder f
@@ -177,31 +177,24 @@ LIMIT 15""",
 )
 SELECT 
   campaign_name as "Campaign",
-  total_exposed as "Total Exposed",
-  converted as "Converted",
-  ROUND((converted::NUMERIC / total_exposed::NUMERIC) * 100, 2) as "Conversion Rate %"
+  total_exposed - converted as "Not Converted",
+  converted as "Converted"
 FROM campaign_metrics
 WHERE total_exposed >= 10
-ORDER BY "Conversion Rate %" DESC
+ORDER BY total_exposed DESC
 LIMIT 10""",
             "viz": {
-                "display": "table",
-                "column_settings": {
-                    "[\"name\",\"Conversion Rate %\"]": {"suffix": "%"}
-                }
-            }
+                "display": "row",
+                "stackable.stack_type": "stacked"
+           }
         },
         {
             "name": "Discount Efficiency Analysis",
             "sql": """SELECT 
-  c.campaign_name as "Campaign",
+  LEFT(c.campaign_name, 25) as "Campaign",
   SUM(f.discount_amount) as "Total Discount",
   SUM(f.net_order_amount) as "Revenue",
-  COUNT(f.order_id) as "Orders",
-  ROUND(
-    (COUNT(CASE WHEN f.availed_flag = TRUE THEN 1 END)::NUMERIC / COUNT(*)::NUMERIC) * 100,
-    2
-  ) as "Conversion Rate"
+  COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
 JOIN warehouse.dimcampaign c ON f.campaign_key = c.campaign_key
 WHERE c.campaign_name NOT ILIKE 'unknown%'
@@ -210,7 +203,9 @@ HAVING COUNT(f.order_id) >= 5
 ORDER BY "Revenue" DESC
 LIMIT 15""",
             "viz": {
-                "display": "table",
+                "display": "scatter",
+                "graph.dimensions": ["Total Discount", "Revenue"],
+                "graph.metrics": ["Revenue"],
                 "column_settings": {
                     "[\"name\",\"Total Discount\"]": {
                         "number_style": "currency",
@@ -221,15 +216,14 @@ LIMIT 15""",
                         "number_style": "currency",
                         "currency": "PHP",
                         "currency_style": "symbol"
-                    },
-                    "[\"name\",\"Conversion Rate\"]": {"suffix": "%"}
+                    }
                 }
             }
         },
         {
             "name": "Campaign Performance Scorecard",
             "sql": """SELECT 
-  c.campaign_name as "Campaign",
+  LEFT(c.campaign_name, 30) as "Campaign",
   SUM(f.net_order_amount) as "Revenue",
   COUNT(f.order_id) as "Orders",
   ROUND(AVG(f.net_order_amount), 2) as "AOV",
@@ -245,7 +239,7 @@ WHERE f.availed_flag = TRUE
 GROUP BY c.campaign_name
 HAVING COUNT(f.order_id) >= 5
 ORDER BY "Revenue" DESC
-LIMIT 20""",
+LIMIT 10""",
             "viz": {
                 "display": "table",
                 "column_settings": {
@@ -272,7 +266,7 @@ LIMIT 20""",
             "name": "Campaign Response by Customer Segment",
             "sql": """SELECT 
   c.user_type as "Customer Type",
-  camp.campaign_name as "Campaign",
+  LEFT(camp.campaign_name, 25) as "Campaign",
   COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
@@ -283,7 +277,10 @@ GROUP BY c.user_type, camp.campaign_name
 HAVING COUNT(f.order_id) >= 3
 ORDER BY "Orders" DESC
 LIMIT 30""",
-            "viz": {"display": "table"}
+            "viz": {
+                "display": "bar",
+                "stackable.stack_type": "stacked"
+            }
         }
     ]
     

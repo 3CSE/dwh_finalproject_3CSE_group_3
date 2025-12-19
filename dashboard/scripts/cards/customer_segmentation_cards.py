@@ -151,7 +151,7 @@ WHERE c.user_type IS NOT NULL AND c.job_level IS NOT NULL
 GROUP BY c.user_type, c.job_level
 HAVING COUNT(f.order_id) >= 10
 ORDER BY "AOV" DESC
-LIMIT 15""",
+LIMIT 5""",
             "viz": {
                 "display": "row",
                 "column_settings": {
@@ -227,10 +227,13 @@ FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.user_type IS NOT NULL AND c.job_level IS NOT NULL
 GROUP BY c.user_type, c.job_level
-HAVING COUNT(f.order_id) >= 5
-ORDER BY "Revenue" DESC""",
+HAVING COUNT(f.order_id) >= 10
+ORDER BY "Revenue" DESC
+LIMIT 10""",
             "viz": {
-                "display": "table",
+                "display": "scatter",
+                "graph.dimensions": ["Orders", "Revenue"],
+                "graph.metrics": ["Revenue"],
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
                         "number_style": "currency",
@@ -255,16 +258,26 @@ ORDER BY "Revenue" DESC""",
     WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) BETWEEN 45 AND 54 THEN '45-54'
     ELSE '55+'
   END as "Age Group",
+  CASE 
+    WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) < 25 THEN 1
+    WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) BETWEEN 25 AND 34 THEN 2
+    WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) BETWEEN 35 AND 44 THEN 3
+    WHEN EXTRACT(YEAR FROM AGE(c.birthdate)) BETWEEN 45 AND 54 THEN 4
+    ELSE 5
+  END as age_order,
   c.gender as "Gender",
   COUNT(f.order_id) as "Orders",
   SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
 WHERE c.birthdate IS NOT NULL AND c.gender IS NOT NULL
-GROUP BY "Age Group", c.gender
-ORDER BY "Revenue" DESC""",
+GROUP BY "Age Group", age_order, c.gender
+ORDER BY age_order, c.gender""",
             "viz": {
                 "display": "bar",
+                "graph.dimensions": ["Age Group"],
+                "graph.metrics": ["Revenue"],
+                "series_settings": {"Gender": {"color": "#509EE3"}},
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
                         "number_style": "currency",

@@ -8,20 +8,12 @@ def load_file(file_path: str, delimiter=None) -> pd.DataFrame:
     try:
         if ext == ".csv":
             if delimiter is None:
-                # Try comma first (most common), then tab, then auto-detect
-                try:
-                    return pd.read_csv(file_path, delimiter=',')
-                except Exception:
-                    try:
-                        return pd.read_csv(file_path, delimiter='\t')
-                    except Exception:
-                        # Fallback to auto-detection
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            sample = f.read(8192)  # Increased sample size
-                            sniffer = csv.Sniffer()
-                            dialect = sniffer.sniff(sample)
-                            delimiter = dialect.delimiter
-                        return pd.read_csv(file_path, delimiter=delimiter)
+                # Auto-detect delimiter
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    sample = f.read(1024)  # read first 1KB for detection
+                    sniffer = csv.Sniffer()
+                    dialect = sniffer.sniff(sample)
+                    delimiter = dialect.delimiter
             return pd.read_csv(file_path, delimiter=delimiter)
 
         elif ext == ".parquet":

@@ -71,21 +71,31 @@ def create_time_based_analysis_cards():
     questions = [
         {
             "name": "Year-over-Year Growth",
-            "sql": """WITH current_year_revenue AS (
+            "sql": """WITH max_year AS (
+  SELECT MAX(d.year) as latest_year
+  FROM warehouse.dimdate d
+  JOIN warehouse.factorder f ON d.date_key = f.transaction_date_key
+),
+current_year_revenue AS (
   SELECT SUM(f.net_order_amount) as revenue
   FROM warehouse.factorder f
   JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
-  WHERE d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+  CROSS JOIN max_year
+  WHERE d.year = max_year.latest_year
 ),
 previous_year_revenue AS (
   SELECT SUM(f.net_order_amount) as revenue
   FROM warehouse.factorder f
   JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
-  WHERE d.year = EXTRACT(YEAR FROM CURRENT_DATE) - 1
+  CROSS JOIN max_year
+  WHERE d.year = max_year.latest_year - 1
 )
-SELECT ROUND(
-  ((c.revenue - p.revenue) / NULLIF(p.revenue, 0)) * 100,
-  2
+SELECT COALESCE(
+  ROUND(
+    ((c.revenue - p.revenue) / NULLIF(p.revenue, 0)) * 100,
+    2
+  ),
+  0
 ) as "YoY Growth %"
 FROM current_year_revenue c, previous_year_revenue p""",
             "viz": {
@@ -97,29 +107,34 @@ FROM current_year_revenue c, previous_year_revenue p""",
         },
         {
             "name": "Month-over-Month Growth",
-            "sql": """WITH max_date AS (
-  SELECT MAX(full_date) as last_date 
-  FROM warehouse.dimdate d 
+            "sql": """WITH date_range AS (
+  SELECT 
+    MAX(d.year) as max_year,
+    MAX(d.month) as max_month
+  FROM warehouse.dimdate d
   JOIN warehouse.factorder f ON d.date_key = f.transaction_date_key
 ),
 current_month AS (
   SELECT SUM(f.net_order_amount) as revenue
   FROM warehouse.factorder f
   JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
-  CROSS JOIN max_date
-  WHERE d.full_date >= max_date.last_date - INTERVAL '30 days'
+  CROSS JOIN date_range
+  WHERE d.year = date_range.max_year AND d.month = date_range.max_month
 ),
 previous_month AS (
   SELECT SUM(f.net_order_amount) as revenue
   FROM warehouse.factorder f
   JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
-  CROSS JOIN max_date
-  WHERE d.full_date >= max_date.last_date - INTERVAL '60 days'
-    AND d.full_date < max_date.last_date - INTERVAL '30 days'
+  CROSS JOIN date_range
+  WHERE (d.year = date_range.max_year AND d.month = date_range.max_month - 1)
+     OR (d.year = date_range.max_year - 1 AND d.month = 12 AND date_range.max_month = 1)
 )
-SELECT ROUND(
-  ((c.revenue - p.revenue) / NULLIF(p.revenue, 0)) * 100,
-  2
+SELECT COALESCE(
+  ROUND(
+    ((c.revenue - p.revenue) / NULLIF(p.revenue, 0)) * 100,
+    2
+  ),
+  0
 ) as "MoM Growth %"
 FROM current_month c, previous_month p""",
             "viz": {
@@ -167,23 +182,22 @@ WHERE d.full_date >= max_date.last_date - INTERVAL '30 days'""",
             "viz": {"display": "scalar"}
         },
         {
-            "name": "Revenue Trend - Year over Year",
+            "name": "Revenue Trend (Last 24 Months)",
             "sql": """WITH max_date AS (
   SELECT MAX(full_date) as last_date 
   FROM warehouse.dimdate d 
   JOIN warehouse.factorder f ON d.date_key = f.transaction_date_key
 )
 SELECT 
-  d.month as "Month Number",
-  d.month_name as "Month",
-  d.year as "Year",
+  TO_CHAR(d.full_date, 'YYYY-MM') as "Year-Month",
+  d.month_name || ' ' || d.year as "Period",
   SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
 CROSS JOIN max_date
 WHERE d.full_date >= max_date.last_date - INTERVAL '24 months'
-GROUP BY d.month, d.month_name, d.year
-ORDER BY d.year, d.month""",
+GROUP BY TO_CHAR(d.full_date, 'YYYY-MM'), d.month_name, d.year, d.month
+ORDER BY TO_CHAR(d.full_date, 'YYYY-MM')""",
             "viz": {
                 "display": "line",
                 "column_settings": {
@@ -214,27 +228,26 @@ ORDER BY d.full_date::date""",
             "viz": {"display": "area"}
         },
         {
-            "name": "AOV Changes Over Time",
+            "name": "Average Order Value Over Time",
             "sql": """WITH max_date AS (
   SELECT MAX(full_date) as last_date 
   FROM warehouse.dimdate d 
   JOIN warehouse.factorder f ON d.date_key = f.transaction_date_key
 )
 SELECT 
-  d.year as "Year",
-  d.month as "Month",
-  d.month_name as "Month Name",
-  ROUND(AVG(f.net_order_amount), 2) as "AOV"
+  TO_CHAR(d.full_date, 'YYYY-MM') as "Year-Month",
+  d.month_name || ' ' || d.year as "Period",
+  ROUND(AVG(f.net_order_amount), 2) as "Average Order Value"
 FROM warehouse.factorder f
 JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
 CROSS JOIN max_date
 WHERE d.full_date >= max_date.last_date - INTERVAL '12 months'
-GROUP BY d.year, d.month, d.month_name
-ORDER BY d.year, d.month""",
+GROUP BY TO_CHAR(d.full_date, 'YYYY-MM'), d.month_name, d.year, d.month
+ORDER BY TO_CHAR(d.full_date, 'YYYY-MM')""",
             "viz": {
                 "display": "line",
                 "column_settings": {
-                    "[\"name\",\"AOV\"]": {
+                    "[\"name\",\"Average Order Value\"]": {
                         "number_style": "currency",
                         "currency": "PHP",
                         "currency_style": "symbol"
@@ -243,16 +256,18 @@ ORDER BY d.year, d.month""",
             }
         },
         {
-            "name": "Seasonality - Orders by Month and Day of Week",
+            "name": "Seasonality - Orders by Month",
             "sql": """SELECT 
   d.month_name as "Month",
-  d.day_of_week as "Day of Week",
+  d.month as month_num,
   COUNT(f.order_id) as "Orders"
 FROM warehouse.factorder f
 JOIN warehouse.dimdate d ON f.transaction_date_key = d.date_key
-GROUP BY d.month, d.month_name, d.day_of_week
-ORDER BY d.month, d.day_of_week""",
-            "viz": {"display": "table"}
+GROUP BY d.month, d.month_name
+ORDER BY d.month""",
+            "viz": {
+                "display": "bar"
+            }
         },
         {
             "name": "Campaign Performance by Period",
@@ -271,9 +286,7 @@ top_campaigns AS (
   LIMIT 5
 )
 SELECT 
-  d.year as "Year",
-  d.month as "Month",
-  d.month_name as "Month Name",
+  TO_CHAR(d.full_date, 'YYYY-MM') as "Period",
   c.campaign_name as "Campaign",
   SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
@@ -283,10 +296,13 @@ CROSS JOIN max_date
 WHERE f.availed_flag = TRUE
   AND d.full_date >= max_date.last_date - INTERVAL '12 months'
   AND c.campaign_name IN (SELECT campaign_name FROM top_campaigns)
-GROUP BY d.year, d.month, d.month_name, c.campaign_name
-ORDER BY d.year, d.month""",
+GROUP BY TO_CHAR(d.full_date, 'YYYY-MM'), c.campaign_name, d.month
+ORDER BY TO_CHAR(d.full_date, 'YYYY-MM')""",
             "viz": {
                 "display": "line",
+                "graph.dimensions": ["Period"],
+                "graph.metrics": ["Revenue"],
+                "graph.series_order": ["Campaign"],
                 "column_settings": {
                     "[\"name\",\"Revenue\"]": {
                         "number_style": "currency",

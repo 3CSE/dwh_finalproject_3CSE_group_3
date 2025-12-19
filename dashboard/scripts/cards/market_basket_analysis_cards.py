@@ -153,7 +153,11 @@ FROM product_pairs
 WHERE pair_count >= 5
 ORDER BY pair_count DESC
 LIMIT 20""",
-            "viz": {"display": "table"}
+            "viz": {
+                "display": "scatter",
+                "graph.dimensions": ["Product A", "Product B"],
+                "graph.metrics": ["Times Bought Together"]
+            }
         },
         {
             "name": "Product Association Matrix",
@@ -163,7 +167,7 @@ LIMIT 20""",
   JOIN warehouse.dimproduct p ON oli.product_key = p.product_key
   GROUP BY p.product_name
   ORDER BY revenue DESC
-  LIMIT 10
+  LIMIT 5
 )
 SELECT 
   p1.product_name as "Product A",
@@ -178,32 +182,37 @@ WHERE oli1.product_key < oli2.product_key
   AND p2.product_name IN (SELECT product_name FROM top_products)
 GROUP BY p1.product_name, p2.product_name
 ORDER BY "Co-occurrence" DESC
-LIMIT 30""",
+LIMIT 15""",
             "viz": {"display": "table"}
         },
         {
             "name": "Basket Size Distribution",
-            "sql": """SELECT 
-  CASE 
-    WHEN number_of_items = 1 THEN '1 item'
-    WHEN number_of_items = 2 THEN '2 items'
-    WHEN number_of_items = 3 THEN '3 items'
-    WHEN number_of_items BETWEEN 4 AND 5 THEN '4-5 items'
-    WHEN number_of_items BETWEEN 6 AND 10 THEN '6-10 items'
-    ELSE '11+ items'
-  END as "Basket Size",
+            "sql": """WITH basket_data AS (
+  SELECT 
+    CASE 
+      WHEN number_of_items = 1 THEN '1 item'
+      WHEN number_of_items = 2 THEN '2 items'
+      WHEN number_of_items = 3 THEN '3 items'
+      WHEN number_of_items BETWEEN 4 AND 5 THEN '4-5 items'
+      WHEN number_of_items BETWEEN 6 AND 10 THEN '6-10 items'
+      ELSE '11+ items'
+    END as basket_size,
+    CASE 
+      WHEN number_of_items = 1 THEN 1
+      WHEN number_of_items = 2 THEN 2
+      WHEN number_of_items = 3 THEN 3
+      WHEN number_of_items BETWEEN 4 AND 5 THEN 4
+      WHEN number_of_items BETWEEN 6 AND 10 THEN 5
+      ELSE 6
+    END as sort_order
+  FROM warehouse.factorder
+)
+SELECT 
+  basket_size as "Basket Size",
   COUNT(*) as "Order Count"
-FROM warehouse.factorder
-GROUP BY "Basket Size"
-ORDER BY 
-  CASE 
-    WHEN number_of_items = 1 THEN 1
-    WHEN number_of_items = 2 THEN 2
-    WHEN number_of_items = 3 THEN 3
-    WHEN number_of_items BETWEEN 4 AND 5 THEN 4
-    WHEN number_of_items BETWEEN 6 AND 10 THEN 5
-    ELSE 6
-  END""",
+FROM basket_data
+GROUP BY basket_size, sort_order
+ORDER BY sort_order""",
             "viz": {"display": "bar"}
         }
     ]

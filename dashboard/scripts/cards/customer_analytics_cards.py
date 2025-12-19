@@ -147,7 +147,6 @@ FROM warehouse.factorder""",
   SUM(f.net_order_amount) as "Revenue"
 FROM warehouse.factorder f
 JOIN warehouse.dimcustomer c ON f.customer_key = c.customer_key
-WHERE c.user_type != 'Unknown' AND c.job_level != 'Unknown'
 GROUP BY c.user_type, c.job_level
 ORDER BY "Revenue" DESC
 LIMIT 5""",
