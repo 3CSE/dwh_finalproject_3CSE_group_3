@@ -1,0 +1,11 @@
+user_id,creation_date,name,street,state,city,country,birthdate,gender,device_address,user_type
+USER100000,4/17/21 22:56,Marcus Miller,14938 West Trace side,New Jersey,Birmingham,Japan,4/6/98 5:29,male,17:fb:f2:60:94:4b,basic
+USER100001,4/18/21 22:56,Jane Smith,896 Glen bury,Alabama,Irvine,Afghanistan,5/22/03 11:16,female,b0:17:a7:0b:d6:67,basic
+USER100002,4/19/21 22:56,Ilya Rosanov,70 Espana,North Carolina,Tampa,USA,8/29/08 16:42,female,24:f2:0b:88:2f:bd,basic
+USER100003,4/20/21 22:56,Scott Hunter,20 Commonwealth,Illinois,Orlando,Switzerland,2/9/12 14:12,male,a4:f5:fd:fe:07:f9,premium
+USER100004,4/21/21 22:56,Tom Cruise,17 West ave,Arizona,Reno,Philippines,10/13/76 0:53,male,ac:80:b3:bc:8d:5f,premium
+USER100005,4/22/21 22:56,Brad Pitt,735 Isle berg,Illinois,Portland,Afghanistan,10/4/19 12:05,male,a5:88:49:43:4a:f1,premium
+USER100006,4/23/21 22:56,Park Jimin,124 Newton,Missouri,Kansas ,Maldives,1/14/85 10:47,male,8b:e3:2d:cf:a8:0d,verified
+USER100007,4/12/21 22:56,Im Nayeon,9814 New Vista chester,Nebraska,Charlotte,Russia,8/26/87 10:39,female,73:94:a8:42:14:77,verified
+USER100008,4/11/21 22:56,Ariana Grande,729 Corner ville,Georgia,Albuquerque,Armenia,5/16/92 0:39,female,f2:43:09:5e:33:76,verified
+USER100009,4/10/21 22:56,Elphaba Thropp,192 East Ave,Washington,Durham,South Korea,2/23/95 11:21,female,06:5d:42:5c:ca:0f,verified

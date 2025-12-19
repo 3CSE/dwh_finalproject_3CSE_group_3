@@ -1,0 +1,11 @@
+,user_id,name,job_title,job_level
+0,USER100000,Marcus Miller,Student,N/A
+1,USER100001,Jane Smith,Executive Associate,Solutions
+2,USER100002,Ilya Rosanov,Singer,Solutions
+3,USER100003,Scott Hunter,Teacher,Usability
+4,USER100004,Tom Cruise,Producer,Usability
+5,USER100005,Brad Pitt,Chef,Implementation
+6,USER100006,Park Jimin,Witch,Human Resources
+7,USER100007,Im Nayeon,Waiter,Operations
+8,USER100008,Ariana Grande,Baker,Implementation
+9,USER100009,Elphaba Thropp,Manager,Directives

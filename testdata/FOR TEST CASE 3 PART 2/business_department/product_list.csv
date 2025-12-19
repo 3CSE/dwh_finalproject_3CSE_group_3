@@ -1,0 +1,11 @@
+,product_id,product_name,product_type,price
+0,PRODUCT200001,eggos,readymade_breakfast,10
+1,PRODUCT200002,cheese,readymade_breakfast,7.5
+2,PRODUCT200003,pancakes,readymade_breakfast,15
+3,PRODUCT200004,uniqlo coat,apparel,500
+4,PRODUCT200005,sisig,readymade_lunch,50
+5,PRODUCT200006,necklace,accessories,900
+6,PRODUCT200007,eternal sunshine album,music,700
+7,PRODUCT200008,tapsilog,readymade_lunch,90
+8,PRODUCT200009,swimming goggles,sports,80
+9,PRODUCT200010,rubber shoes,sports,1000

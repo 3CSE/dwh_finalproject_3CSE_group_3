@@ -1,0 +1,4 @@
+merchant_id,creation_datename,street,state,city,country,contact_number
+MERCHANT100000, 2022-01-01,30 Igad St.,NY,Los Angeles,USA,999-4567
+MERCHANT100001, 2022-01-02,1 The Fort,LA,Quezon City,Philippines,101-2344
+MERCHANT100002, 2022-01-03,30 Asturias,CN,Pasay City,Japan,123-4567

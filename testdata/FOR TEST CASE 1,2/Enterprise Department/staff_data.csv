@@ -1,0 +1,4 @@
+staff_id,name,job_level,street,state,city,country,contact_number,creation_date
+STAFF100001,Mary Walterback,intermediate,123 Elm St.,Texas,New York,USA,(900)123-9292,2/1/22 10:00
+STAFF100002,Cynthia Erivo,beginner,356 P Noval,Kentucky,Omaha,Philippines,(1213)111-2222,2/18/22 6:00
+STAFF100003,Taylor Swift,senior,123 Lovers Lane,Arizona,Madrid,Japan,(9876)875-4322,2/20/22 5:50

@@ -1,0 +1,11 @@
+user_id,name,credit_card_number,issuing_bank
+USER100000,Marcus Miller,8472948366,bdo
+USER100001,Jane Smith,9374629373,chinabank
+USER100002,Ilya Rosanov,2343124545,chinabank
+USER100003,Scott Hunter,8923492347,metrobank
+USER100004,Tom Cruise,3893298422,metrobank
+USER100005,Brad Pitt,4239829283,metrobank
+USER100006,Park Jimin,4298239489,bdo
+USER100007,Im Nayeon,8293849823,bdo
+USER100008,Ariana Grande,1983298934,bpi
+USER100009,Elphaba Thropp,8493843984,bpi
